@@ -1,0 +1,187 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "launch-vehicle-catalog-entry",
+  "title": "LaunchVehicleEntry",
+  "description": "A single launch vehicle or rideshare program entry in the mission configurator catalog.",
+  "type": "object",
+  "required": [
+    "id",
+    "provider",
+    "vehicle",
+    "type",
+    "capacity",
+    "cost",
+    "orbit_options",
+    "integration",
+    "cadence",
+    "status",
+    "notes"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique slug identifier, e.g. 'spacex-transporter'.",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "provider": {
+      "type": "string",
+      "description": "Name of the launch provider company."
+    },
+    "vehicle": {
+      "type": "string",
+      "description": "Name of the launch vehicle or rideshare program."
+    },
+    "type": {
+      "type": "string",
+      "description": "Mission type for this entry.",
+      "enum": ["rideshare", "dedicated-small", "dedicated-medium", "dedicated-large"]
+    },
+    "capacity": {
+      "type": "object",
+      "description": "Payload mass capacity to representative orbits (kg).",
+      "required": ["max_kg"],
+      "properties": {
+        "max_kg": {
+          "type": "number",
+          "description": "Maximum payload mass the vehicle / slot can accommodate (kg)."
+        },
+        "to_LEO_kg": {
+          "type": ["number", "null"],
+          "description": "Capacity to a low Earth orbit reference altitude (kg). Null if not applicable."
+        },
+        "to_SSO_kg": {
+          "type": ["number", "null"],
+          "description": "Capacity to sun-synchronous orbit reference altitude (kg). Null if not applicable."
+        },
+        "to_GTO_kg": {
+          "type": ["number", "null"],
+          "description": "Capacity to geostationary transfer orbit (kg). Null if not applicable."
+        },
+        "reference_altitude_km": {
+          "type": ["number", "null"],
+          "description": "Altitude at which the capacity figures are quoted (km)."
+        },
+        "min_kg": {
+          "type": ["number", "null"],
+          "description": "Minimum payload mass (rideshare minimum slot, if applicable)."
+        }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "description": "Pricing structure.",
+      "required": ["model"],
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Pricing model type.",
+          "enum": ["flat-per-launch", "per-kg", "base-plus-per-kg", "negotiated"]
+        },
+        "base_usd": {
+          "type": ["number", "null"],
+          "description": "Base price in USD (for flat or base+per-kg models)."
+        },
+        "per_kg_usd": {
+          "type": ["number", "null"],
+          "description": "Marginal cost per kg in USD (for per-kg or base+per-kg models)."
+        },
+        "typical_total_usd": {
+          "type": ["number", "null"],
+          "description": "Typical all-in price for a reference mission in USD. Useful for rough comparison."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free-text notes about pricing caveats, inclusions, or discounts."
+        }
+      }
+    },
+    "orbit_options": {
+      "type": "object",
+      "description": "Supported orbit types and flexibility.",
+      "required": ["supported_orbit_types", "inclination_flexibility"],
+      "properties": {
+        "supported_orbit_types": {
+          "type": "array",
+          "description": "List of orbit types this vehicle/program can deliver to.",
+          "items": {
+            "type": "string",
+            "enum": ["LEO", "SSO", "MEO", "GTO", "GEO", "HEO", "TLI", "custom-LEO"]
+          },
+          "minItems": 1
+        },
+        "inclination_flexibility": {
+          "type": "string",
+          "description": "Degree of freedom in choosing orbital inclination.",
+          "enum": ["fixed", "limited", "customer-defined"]
+        },
+        "altitude_range_km": {
+          "type": "object",
+          "description": "Accessible altitude range (km).",
+          "properties": {
+            "min": { "type": ["number", "null"] },
+            "max": { "type": ["number", "null"] }
+          }
+        }
+      }
+    },
+    "integration": {
+      "type": "object",
+      "description": "Integration and launch timeline details.",
+      "required": ["lead_time_months"],
+      "properties": {
+        "lead_time_months": {
+          "type": "object",
+          "description": "Expected integration lead time range (months from contract to launch).",
+          "required": ["min", "max"],
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" }
+          }
+        },
+        "interface_standard": {
+          "type": ["string", "null"],
+          "description": "Standard mechanical/electrical interface (e.g. 'ESPA', 'CSD', 'NLAS', 'custom')."
+        },
+        "dispensers_provided": {
+          "type": "boolean",
+          "description": "Whether the provider supplies the separation system/dispenser."
+        }
+      }
+    },
+    "cadence": {
+      "type": "object",
+      "description": "Launch frequency and scheduling flexibility.",
+      "required": ["schedule_control"],
+      "properties": {
+        "schedule_control": {
+          "type": "string",
+          "description": "Who controls the launch date.",
+          "enum": ["customer", "provider-fixed", "provider-flexible"]
+        },
+        "launches_per_year": {
+          "type": ["number", "null"],
+          "description": "Approximate annual launch cadence for this vehicle."
+        },
+        "next_available_window": {
+          "type": ["string", "null"],
+          "description": "Rough indication of next available launch window (e.g. 'Q1 2026', 'ongoing'). Best-effort; verify with provider."
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "description": "Operational status of the vehicle.",
+      "enum": ["operational", "development", "retired", "planned"]
+    },
+    "data_sources": {
+      "type": "array",
+      "description": "List of primary sources consulted for this entry.",
+      "items": { "type": "string" }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Any additional free-text notes, caveats, or context relevant to mission planning."
+    }
+  },
+  "additionalProperties": false
+}

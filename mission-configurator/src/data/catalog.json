@@ -1,0 +1,296 @@
+[
+  {
+    "id": "spacex-transporter",
+    "provider": "SpaceX",
+    "vehicle": "Falcon 9 Transporter (Rideshare)",
+    "type": "rideshare",
+    "capacity": {
+      "max_kg": 200,
+      "to_LEO_kg": null,
+      "to_SSO_kg": 200,
+      "to_GTO_kg": null,
+      "reference_altitude_km": 525,
+      "min_kg": 1
+    },
+    "cost": {
+      "model": "per-kg",
+      "base_usd": null,
+      "per_kg_usd": 6000,
+      "typical_total_usd": 300000,
+      "notes": "SpaceX Smallsat Rideshare Program pricing is $6,000/kg to SSO. Minimum buy is ~$5,000 (roughly 1 kg slot). Prices do not include payload integration hardware (ESPA ring or CSD dispenser) which the customer typically provides or purchases separately."
+    },
+    "orbit_options": {
+      "supported_orbit_types": ["SSO"],
+      "inclination_flexibility": "fixed",
+      "altitude_range_km": { "min": 500, "max": 560 }
+    },
+    "integration": {
+      "lead_time_months": { "min": 6, "max": 12 },
+      "interface_standard": "ESPA / CSD",
+      "dispensers_provided": false
+    },
+    "cadence": {
+      "schedule_control": "provider-fixed",
+      "launches_per_year": 6,
+      "next_available_window": "ongoing — multiple Transporter missions per year"
+    },
+    "status": "operational",
+    "data_sources": [
+      "SpaceX Smallsat Rideshare Program page (spacex.com/rideshare)",
+      "SpaceX Rideshare Payload User's Guide Rev 2.0"
+    ],
+    "notes": "Fixed SSO inclination (~97.6°) at ~525 km; customer cannot choose altitude or inclination. Well-suited for constellations and earth-observation payloads that fit the SSO slot. Schedule is set by primary/anchor customer. Highest cadence rideshare program available."
+  },
+  {
+    "id": "rocketlab-electron",
+    "provider": "Rocket Lab",
+    "vehicle": "Electron",
+    "type": "dedicated-small",
+    "capacity": {
+      "max_kg": 300,
+      "to_LEO_kg": 300,
+      "to_SSO_kg": 200,
+      "to_GTO_kg": null,
+      "reference_altitude_km": 500,
+      "min_kg": null
+    },
+    "cost": {
+      "model": "flat-per-launch",
+      "base_usd": 8000000,
+      "per_kg_usd": null,
+      "typical_total_usd": 8000000,
+      "notes": "Rocket Lab lists Electron dedicated launch pricing starting at approximately $8M per mission (2024/2025 rate card). Final price varies with orbit, integration complexity, and range fees. Rideshare (Responsive Space) slots exist at lower cost but with shared schedule."
+    },
+    "orbit_options": {
+      "supported_orbit_types": ["LEO", "SSO", "custom-LEO"],
+      "inclination_flexibility": "customer-defined",
+      "altitude_range_km": { "min": 200, "max": 1200 }
+    },
+    "integration": {
+      "lead_time_months": { "min": 6, "max": 12 },
+      "interface_standard": "Rocket Lab standard (6U, 12U, ESPA)",
+      "dispensers_provided": true
+    },
+    "cadence": {
+      "schedule_control": "customer",
+      "launches_per_year": 15,
+      "next_available_window": "typically 6-12 months after contract"
+    },
+    "status": "operational",
+    "data_sources": [
+      "Rocket Lab Electron Payload User's Guide (rocketlabusa.com)",
+      "Rocket Lab investor presentations 2024"
+    ],
+    "notes": "Sole dedicated small-launch vehicle with demonstrated high cadence from both Mahia (NZ) and Wallops (VA) launch sites. Customer chooses inclination, altitude, and LTAN freely. Ideal for payloads that cannot share an orbit with others or need a specific phasing. Kick Stage option enables highly elliptical or custom final orbits."
+  },
+  {
+    "id": "firefly-alpha",
+    "provider": "Firefly Aerospace",
+    "vehicle": "Firefly Alpha",
+    "type": "dedicated-small",
+    "capacity": {
+      "max_kg": 1030,
+      "to_LEO_kg": 1030,
+      "to_SSO_kg": 630,
+      "to_GTO_kg": null,
+      "reference_altitude_km": 500,
+      "min_kg": null
+    },
+    "cost": {
+      "model": "flat-per-launch",
+      "base_usd": 15000000,
+      "per_kg_usd": null,
+      "typical_total_usd": 15000000,
+      "notes": "Firefly Alpha list price is approximately $15M per dedicated launch. Rideshare slots available through Firefly's ELaNa/VCLS agreements and commercial rideshare at lower per-kg cost. Price may vary by contract year."
+    },
+    "orbit_options": {
+      "supported_orbit_types": ["LEO", "SSO", "custom-LEO"],
+      "inclination_flexibility": "customer-defined",
+      "altitude_range_km": { "min": 200, "max": 1000 }
+    },
+    "integration": {
+      "lead_time_months": { "min": 9, "max": 18 },
+      "interface_standard": "ESPA Grande / custom",
+      "dispensers_provided": false
+    },
+    "cadence": {
+      "schedule_control": "customer",
+      "launches_per_year": 4,
+      "next_available_window": "2025-2026 manifest — verify directly with Firefly"
+    },
+    "status": "operational",
+    "data_sources": [
+      "Firefly Aerospace Alpha Payload User's Guide (fireflyspace.com)",
+      "Firefly Alpha Launch Services Agreement template 2023"
+    ],
+    "notes": "Largest payload capacity in the 'small dedicated' class. Launches from Vandenberg SLC-2. Good option when total manifest mass exceeds Electron's 300 kg ceiling but a full medium launch would be over-sized and over-priced. Cadence still maturing (first successful orbital launch 2023)."
+  },
+  {
+    "id": "arianespace-vega-c-ssms",
+    "provider": "Arianespace / ESA",
+    "vehicle": "Vega-C (SSMS rideshare)",
+    "type": "rideshare",
+    "capacity": {
+      "max_kg": 700,
+      "to_LEO_kg": null,
+      "to_SSO_kg": 700,
+      "to_GTO_kg": null,
+      "reference_altitude_km": 500,
+      "min_kg": 1
+    },
+    "cost": {
+      "model": "per-kg",
+      "base_usd": null,
+      "per_kg_usd": 20000,
+      "typical_total_usd": null,
+      "notes": "SSMS (Small Spacecraft Mission Service) rideshare pricing is approximately €15,000–€20,000/kg depending on slot size and orbit. ESA member-state payloads may benefit from preferential rates. Prices in EUR; USD equivalent varies with exchange rate."
+    },
+    "orbit_options": {
+      "supported_orbit_types": ["SSO"],
+      "inclination_flexibility": "fixed",
+      "altitude_range_km": { "min": 500, "max": 700 }
+    },
+    "integration": {
+      "lead_time_months": { "min": 12, "max": 24 },
+      "interface_standard": "ESPA / P-POD / NLAS",
+      "dispensers_provided": false
+    },
+    "cadence": {
+      "schedule_control": "provider-fixed",
+      "launches_per_year": 2,
+      "next_available_window": "verify with Arianespace — Vega-C return-to-flight 2024/2025"
+    },
+    "status": "operational",
+    "data_sources": [
+      "Arianespace Vega-C User's Manual Issue 0 Rev 0 (arianespace.com)",
+      "ESA SSMS rideshare program documentation"
+    ],
+    "notes": "European rideshare alternative to SpaceX Transporter. Larger total payload capacity per flight (700 kg to SSO) and more flexibility in cluster composition. Vega-C experienced a launch failure in Dec 2022; return-to-flight status should be verified before commitment. Launches from Kourou (French Guiana)."
+  },
+  {
+    "id": "isro-pslv-cl",
+    "provider": "ISRO / NewSpace India Limited (NSIL)",
+    "vehicle": "PSLV-C (commercial rideshare)",
+    "type": "rideshare",
+    "capacity": {
+      "max_kg": 1750,
+      "to_LEO_kg": 3800,
+      "to_SSO_kg": 1750,
+      "to_GTO_kg": null,
+      "reference_altitude_km": 600,
+      "min_kg": 1
+    },
+    "cost": {
+      "model": "per-kg",
+      "base_usd": null,
+      "per_kg_usd": 15000,
+      "typical_total_usd": null,
+      "notes": "Commercial rideshare pricing through NSIL is approximately $10,000–$15,000/kg to SSO depending on payload size. Pricing for smaller cubesat slots may differ. All commercial launches contracted through NewSpace India Limited (NSIL)."
+    },
+    "orbit_options": {
+      "supported_orbit_types": ["LEO", "SSO"],
+      "inclination_flexibility": "limited",
+      "altitude_range_km": { "min": 400, "max": 900 }
+    },
+    "integration": {
+      "lead_time_months": { "min": 12, "max": 24 },
+      "interface_standard": "ISRO standard (P-POD compatible)",
+      "dispensers_provided": false
+    },
+    "cadence": {
+      "schedule_control": "provider-fixed",
+      "launches_per_year": 5,
+      "next_available_window": "ongoing — verify with NSIL for next available commercial rideshare slot"
+    },
+    "status": "operational",
+    "data_sources": [
+      "ISRO PSLV User's Manual (isro.gov.in)",
+      "NewSpace India Limited commercial launch services (nsil.co.in)"
+    ],
+    "notes": "Very cost-competitive rideshare option for SSO and mid-inclination LEO payloads. PSLV has an outstanding reliability record (50+ consecutive successes). Launches from Sriharikota, India. Lead times and procurement process can be longer than Western providers for non-Indian customers."
+  },
+  {
+    "id": "virgin-orbit-launcher-one",
+    "provider": "Virgin Orbit",
+    "vehicle": "LauncherOne",
+    "type": "dedicated-small",
+    "capacity": {
+      "max_kg": 500,
+      "to_LEO_kg": 500,
+      "to_SSO_kg": 300,
+      "to_GTO_kg": null,
+      "reference_altitude_km": 500,
+      "min_kg": null
+    },
+    "cost": {
+      "model": "flat-per-launch",
+      "base_usd": 12000000,
+      "per_kg_usd": null,
+      "typical_total_usd": 12000000,
+      "notes": "Virgin Orbit ceased operations in April 2023. Entry retained for historical reference and comparative analysis only. Pricing figures are from pre-closure commercial rate cards."
+    },
+    "orbit_options": {
+      "supported_orbit_types": ["LEO", "SSO", "custom-LEO"],
+      "inclination_flexibility": "customer-defined",
+      "altitude_range_km": { "min": 300, "max": 600 }
+    },
+    "integration": {
+      "lead_time_months": { "min": 12, "max": 18 },
+      "interface_standard": "ESPA",
+      "dispensers_provided": false
+    },
+    "cadence": {
+      "schedule_control": "customer",
+      "launches_per_year": 0,
+      "next_available_window": null
+    },
+    "status": "retired",
+    "data_sources": [
+      "Virgin Orbit LauncherOne Payload User's Guide Rev C (archived)",
+      "Virgin Orbit bankruptcy proceedings April 2023 (public records)"
+    ],
+    "notes": "RETIRED — included only for catalog completeness and historical cost-comparison reference. Virgin Orbit filed for bankruptcy in April 2023 and ceased all operations. Do not route live missions to this entry."
+  },
+  {
+    "id": "exolaunch-rideshare-d-orbit",
+    "provider": "D-Orbit / Exolaunch",
+    "vehicle": "ION Satellite Carrier (via SpaceX Transporter or Vega-C)",
+    "type": "rideshare",
+    "capacity": {
+      "max_kg": 450,
+      "to_LEO_kg": null,
+      "to_SSO_kg": 450,
+      "to_GTO_kg": null,
+      "reference_altitude_km": 525,
+      "min_kg": 1
+    },
+    "cost": {
+      "model": "per-kg",
+      "base_usd": null,
+      "per_kg_usd": 10000,
+      "typical_total_usd": null,
+      "notes": "D-Orbit ION acts as a hosted-payload / last-mile delivery service. Pricing stacks on top of the base rideshare cost (~$6,000/kg for SpaceX Transporter) plus D-Orbit's orbital transfer fee. Total estimated $8,000–$12,000/kg depending on final orbit delta-V. Provides significant last-mile orbit-raising/lowering capability."
+    },
+    "orbit_options": {
+      "supported_orbit_types": ["LEO", "SSO", "custom-LEO"],
+      "inclination_flexibility": "limited",
+      "altitude_range_km": { "min": 400, "max": 600 }
+    },
+    "integration": {
+      "lead_time_months": { "min": 6, "max": 12 },
+      "interface_standard": "CSD / NLAS / custom",
+      "dispensers_provided": true
+    },
+    "cadence": {
+      "schedule_control": "provider-fixed",
+      "launches_per_year": 4,
+      "next_available_window": "ongoing — tied to SpaceX Transporter cadence"
+    },
+    "status": "operational",
+    "data_sources": [
+      "D-Orbit ION Satellite Carrier product page (d-orbit.space)",
+      "Exolaunch EXOpod / EXObox technical datasheet (exolaunch.com)"
+    ],
+    "notes": "Orbital transfer vehicle (OTV) that rides as a rideshare payload and then independently delivers hosted smallsats to their precise final orbit. Solves the 'rideshare fixed orbit' limitation by adding propulsive last-mile capability. Higher total cost than a pure rideshare slot, but may be cheaper than booking a dedicated launch when the customer needs a non-standard altitude or local-solar-time."
+  }
+]
