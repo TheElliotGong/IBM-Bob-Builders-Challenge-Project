@@ -17,6 +17,8 @@ import SessionHistoryPanel, {
   deleteSession,
   clearAllSessions,
 } from "@/components/SessionHistoryPanel";
+import SettingsPanel from "@/components/SettingsPanel";
+import { useUISettings } from "@/lib/uiSettings";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -285,6 +287,15 @@ function RankedVehicleCard({ match, isTop }: { match: RankedVehicle; isTop: bool
   );
 }
 
+function GearIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+    </svg>
+  );
+}
+
 function CheckIcon({ ok }: { ok: boolean }) {
   return (
     <span className={ok ? "text-emerald-400" : "text-rose-400"} aria-hidden="true">
@@ -550,6 +561,9 @@ const PLACEHOLDER = `Example: "We have a 45 kg Earth observation satellite targe
 const DEFAULT_WEIGHTS: PriorityWeights = { cost: 3, schedule: 3, orbit_precision: 3 };
 
 export default function Home() {
+  const { settings, resolvedTheme } = useUISettings();
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
+
   const [description, setDescription] = useState("");
   const [weights, setWeights] = useState<PriorityWeights>(DEFAULT_WEIGHTS);
   const [loading, setLoading] = useState(false);
@@ -663,29 +677,55 @@ export default function Home() {
     }
   }
 
+  const densityClass =
+    settings.density === "compact"
+      ? "density-compact"
+      : settings.density === "spacious"
+      ? "density-spacious"
+      : "";
+
   return (
-    <div className="relative min-h-screen bg-slate-950 text-slate-100">
+    <div className={`relative min-h-screen text-slate-100 ${resolvedTheme === "light" ? "bg-slate-100 light-theme" : "bg-slate-950"} ${densityClass}`}>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 px-4 py-2 rounded bg-sky-600 text-white text-sm font-semibold"
       >
         Skip to main content
       </a>
-      <Stars />
+      {resolvedTheme === "dark" && <Stars />}
+
+      <SettingsPanel open={settingsPanelOpen} onClose={() => setSettingsPanelOpen(false)} />
 
       <main id="main-content" className="relative z-10 max-w-3xl mx-auto px-4 py-12 space-y-10">
         {/* Header */}
         <header className="space-y-2">
-          <p className="text-xs font-semibold tracking-widest text-sky-400 uppercase" aria-hidden="true">
-            IBM Builders Challenge · Mission Planning
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-50">
-            AI Launch Vehicle Selector
-          </h1>
-          <p className="text-slate-400 text-sm leading-relaxed max-w-lg">
-            Describe your mission in plain English. The AI pipeline will parse your requirements,
-            filter the launch catalog, rank options by your priorities, and explain the trade-offs.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2 flex-1">
+              <p className="text-xs font-semibold tracking-widest text-sky-400 uppercase" aria-hidden="true">
+                IBM Builders Challenge · Mission Planning
+              </p>
+              <h1 className={`text-3xl font-bold tracking-tight ${resolvedTheme === "light" ? "text-slate-900" : "text-slate-50"}`}>
+                AI Launch Vehicle Selector
+              </h1>
+              <p className={`text-sm leading-relaxed max-w-lg ${resolvedTheme === "light" ? "text-slate-600" : "text-slate-400"}`}>
+                Describe your mission in plain English. The AI pipeline will parse your requirements,
+                filter the launch catalog, rank options by your priorities, and explain the trade-offs.
+              </p>
+            </div>
+            {/* Settings gear button */}
+            <button
+              onClick={() => setSettingsPanelOpen(true)}
+              aria-label="Open UI settings"
+              title="UI Settings"
+              className={`shrink-0 mt-1 p-2 rounded-lg border transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2
+                ${resolvedTheme === "light"
+                  ? "border-slate-300 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                  : "border-slate-700 bg-slate-800/60 text-slate-400 hover:bg-slate-700 hover:text-slate-100"
+                }`}
+            >
+              <GearIcon />
+            </button>
+          </div>
         </header>
 
         {/* Input */}

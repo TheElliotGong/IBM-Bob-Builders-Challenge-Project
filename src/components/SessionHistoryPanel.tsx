@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import type { SessionRecord } from "@/lib/types";
+import { useUISettings } from "@/lib/uiSettings";
 
 const STORAGE_KEY = "launch-selector-sessions";
 const MAX_SESSIONS = 50;
@@ -58,6 +59,8 @@ export default function SessionHistoryPanel({
   onClearAll,
 }: SessionHistoryPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { settings } = useUISettings();
+  const locale = settings.language;
 
   // Scroll to top whenever a new session is prepended
   useEffect(() => {
@@ -99,6 +102,7 @@ export default function SessionHistoryPanel({
             session={session}
             onRestore={onRestore}
             onDelete={onDelete}
+            locale={locale}
           />
         ))}
       </div>
@@ -114,15 +118,17 @@ function SessionCard({
   session,
   onRestore,
   onDelete,
+  locale,
 }: {
   session: SessionRecord;
   onRestore: (s: SessionRecord) => void;
   onDelete: (id: string) => void;
+  locale: string;
 }) {
   const topVehicle = session.ranked[0]?.entry;
   const date = new Date(session.createdAt);
-  const dateStr = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const timeStr = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const dateStr = date.toLocaleDateString(locale, { month: "short", day: "numeric" });
+  const timeStr = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 
   const orbitLabel = session.mission.orbit_type ?? "—";
   const massLabel =
