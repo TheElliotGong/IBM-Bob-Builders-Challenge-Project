@@ -82,11 +82,13 @@ export default function DownloadMenu({ payload }: DownloadMenuProps) {
         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-600 bg-slate-800 hover:bg-slate-700 hover:border-slate-500 text-sm font-medium text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls="download-menu"
+        aria-label={busy ? `Exporting as ${busy}…` : "Download report"}
       >
         {busy ? (
           <>
             <SpinnerIcon />
-            Exporting…
+            <span aria-live="polite">Exporting…</span>
           </>
         ) : (
           <>
@@ -99,33 +101,43 @@ export default function DownloadMenu({ payload }: DownloadMenuProps) {
 
       {open && (
         <div
+          id="download-menu"
           role="listbox"
+          aria-label="Choose download format"
           className="absolute right-0 mt-1.5 w-64 rounded-xl border border-slate-700 bg-slate-900 shadow-2xl z-50 overflow-hidden"
         >
           {FORMAT_GROUPS.map((group) => (
-            <div key={group.label}>
-              <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            <div key={group.label} role="group" aria-label={group.label}>
+              <p
+                className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500"
+                aria-hidden="true"
+              >
                 {group.label}
               </p>
               {group.formats.map((fmt) => (
                 <button
                   key={fmt.id}
                   role="option"
+                  aria-selected={false}
                   onClick={() => handleDownload(fmt.id)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-800 transition-colors text-left"
+                  aria-label={`Download as ${fmt.label} — ${fmt.description}`}
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-800 transition-colors text-left focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-[-2px]"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="w-10 shrink-0 text-xs font-mono font-bold text-sky-400 bg-slate-800 rounded px-1 py-0.5 text-center">
+                    <span
+                      className="w-10 shrink-0 text-xs font-mono font-bold text-sky-400 bg-slate-800 rounded px-1 py-0.5 text-center"
+                      aria-hidden="true"
+                    >
                       {fmt.ext}
                     </span>
                     <span className="text-slate-200">{fmt.label}</span>
                   </span>
-                  <span className="text-slate-500 text-xs">{fmt.description}</span>
+                  <span className="text-slate-500 text-xs" aria-hidden="true">{fmt.description}</span>
                 </button>
               ))}
             </div>
           ))}
-          <div className="h-2" />
+          <div className="h-2" aria-hidden="true" />
         </div>
       )}
     </div>
@@ -138,7 +150,7 @@ export default function DownloadMenu({ payload }: DownloadMenuProps) {
 
 function DownloadIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M8 2v8M5 7l3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M2 12h12" strokeLinecap="round" />
     </svg>
@@ -148,6 +160,7 @@ function DownloadIcon() {
 function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg
+      aria-hidden="true"
       width="12"
       height="12"
       viewBox="0 0 12 12"
@@ -163,7 +176,7 @@ function ChevronIcon({ open }: { open: boolean }) {
 
 function SpinnerIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
       <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
     </svg>
   );

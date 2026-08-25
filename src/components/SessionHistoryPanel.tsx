@@ -67,18 +67,19 @@ export default function SessionHistoryPanel({
   if (sessions.length === 0) return null;
 
   return (
-    <section className="space-y-3">
+    <section aria-label="Session History" className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
           Session History
-          <span className="ml-2 text-slate-600 font-normal normal-case tracking-normal">
+          <span className="ml-2 text-slate-600 font-normal normal-case tracking-normal" aria-label={`(${sessions.length} sessions)`}>
             ({sessions.length})
           </span>
-        </p>
+        </h2>
         <button
           onClick={onClearAll}
-          className="text-xs text-slate-600 hover:text-rose-400 transition-colors"
+          aria-label="Clear all session history"
+          className="text-xs text-slate-600 hover:text-rose-400 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
         >
           Clear all
         </button>
@@ -87,6 +88,8 @@ export default function SessionHistoryPanel({
       {/* Horizontal scroll strip */}
       <div
         ref={scrollRef}
+        role="list"
+        aria-label="Past sessions"
         className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: "thin" }}
       >
@@ -129,9 +132,9 @@ function SessionCard({
   const viableCount = session.ranked.length;
 
   return (
-    <div className="snap-start shrink-0 w-52 rounded-xl border border-slate-700 bg-slate-800/70 backdrop-blur flex flex-col overflow-hidden">
+    <div role="listitem" className="snap-start shrink-0 w-52 rounded-xl border border-slate-700 bg-slate-800/70 backdrop-blur flex flex-col overflow-hidden">
       {/* Colour accent bar */}
-      <div className="h-1 w-full bg-gradient-to-r from-sky-600 to-indigo-600" />
+      <div className="h-1 w-full bg-gradient-to-r from-sky-600 to-indigo-600" aria-hidden="true" />
 
       <div className="p-3 flex flex-col gap-2 flex-1">
         {/* Timestamp */}
@@ -170,17 +173,18 @@ function SessionCard({
       <div className="border-t border-slate-700 flex">
         <button
           onClick={() => onRestore(session)}
-          className="flex-1 py-1.5 text-xs text-sky-400 hover:bg-slate-700 transition-colors font-medium"
+          aria-label={`Restore session from ${dateStr} — ${topVehicle?.vehicle ?? "no viable options"}`}
+          className="flex-1 py-1.5 text-xs text-sky-400 hover:bg-slate-700 transition-colors font-medium focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-[-2px]"
         >
           Restore
         </button>
-        <div className="w-px bg-slate-700" />
+        <div className="w-px bg-slate-700" aria-hidden="true" />
         <button
           onClick={() => onDelete(session.id)}
-          className="px-3 py-1.5 text-xs text-slate-500 hover:text-rose-400 hover:bg-slate-700 transition-colors"
-          aria-label="Delete session"
+          aria-label={`Delete session from ${dateStr}`}
+          className="px-3 py-1.5 text-xs text-slate-500 hover:text-rose-400 hover:bg-slate-700 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-[-2px]"
         >
-          ✕
+          <span aria-hidden="true">✕</span>
         </button>
       </div>
     </div>

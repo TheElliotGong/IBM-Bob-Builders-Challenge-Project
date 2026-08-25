@@ -7,10 +7,11 @@ An AI-powered mission-planning configurator that takes a small satellite mission
 
 ## What it does
 
-1. **Parses** a free-text mission description into structured fields (payload mass, orbit type/altitude, budget ceiling, schedule urgency) via an LLM prompt.
+1. **Parses** a free-text mission description into structured fields (payload mass, orbit type/altitude, budget ceiling, schedule urgency, inclination flexibility) via Gemini 2.0 Flash. Falls back to a regex heuristic when no API key is present.
 2. **Filters** the provider catalog to eliminate options that physically can't meet the mass or orbit constraints.
 3. **Ranks** remaining options by user-weighted priorities (cost vs. schedule control vs. orbit precision).
 4. **Explains** the recommendation in plain language — why the top pick wins and what the trade-offs are against alternatives.
+5. **Improves** the user's description before or after submission — identifies missing fields and, when Gemini is available, returns a rewritten draft with bracketed prompts for each gap. A post-parse nudge also surfaces missing fields inline on the result card at zero extra cost.
 
 ---
 
@@ -18,17 +19,32 @@ An AI-powered mission-planning configurator that takes a small satellite mission
 
 ```
 data/
-  catalog.schema.json   — JSON Schema (draft-07) defining every field in a catalog entry
-  catalog.json          — Starter catalog of 7 launch vehicles / rideshare programs
+  catalog.schema.json     JSON Schema (draft-07) defining every field in a catalog entry
+  catalog.json            Catalog of 7 launch vehicles / rideshare programs
 src/
-  (parser, filter, ranker, explainer — built in Days 2–4)
-public/
-  (UI assets — built in Day 6)
+  app/
+    page.tsx              Single-page UI (parser, ImprovePanel, results)
+    api/
+      parse/route.ts      POST /api/parse
+      rank/route.ts       POST /api/rank
+      explain/route.ts    POST /api/explain
+      improve/route.ts    POST /api/improve
+  lib/
+    types.ts              Shared TypeScript interfaces
+    parser.ts             Gemini parser + regex fallback
+    filter.ts             Hard-constraint catalog filter
+    ranker.ts             Weighted scorer
+    explainer.ts          Gemini explanation + template fallback
+    improver.ts           Gemini description improver + fallback
+  components/
+    DownloadMenu.tsx
+    SessionHistoryPanel.tsx
+  __tests__/              Jest test suite (73 tests)
 ```
 
 ---
 
-## Catalog (Day 1)
+## Catalog
 
 Seven entries covering the realistic trade-space for smallsat / cubesat missions:
 
@@ -46,15 +62,15 @@ Seven entries covering the realistic trade-space for smallsat / cubesat missions
 
 ---
 
-## Build Plan
+## Build status
 
 | Day | Focus | Status |
 |---|---|---|
 | 1 | Scope lock; JSON schema; starter catalog (7 entries) | ✅ Complete |
 | 2–3 | LLM input parser + catalog filter + matcher | ✅ Complete |
-| 4 | Weighted ranker + LLM explanation layer | ⬜ |
-| 5 | Test against 5–6 varied example missions; tune | ⬜ |
-| 6 | Polish UI; write submission narrative | ⬜ |
+| 4 | Weighted ranker + LLM explanation layer | ✅ Complete |
+| 5 | Test against varied example missions; tune; session history; export | ✅ Complete |
+| 6 | Polish UI; "Improve my description" feature (Tier 1 + 2) | ✅ Complete |
 | 7 | Buffer + submit | ⬜ |
 
 ---

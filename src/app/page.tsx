@@ -7,6 +7,7 @@ import type {
   MatchedVehicle,
   PriorityWeights,
   ExplainResponse,
+  ImproveResponse,
   SessionRecord,
 } from "@/lib/types";
 import DownloadMenu from "@/components/DownloadMenu";
@@ -25,6 +26,32 @@ function fmtUsd(v: number | null): string {
   if (v === null) return "—";
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
   return `$${v.toLocaleString()}`;
+}
+
+// ---------------------------------------------------------------------------
+// Required fields — single source of truth used by PromptFieldsHint,
+// ImprovePanel (Tier 2) and Tier-1 missing-field detection.
+// ---------------------------------------------------------------------------
+
+export const REQUIRED_FIELDS: {
+  name: string;
+  key: keyof Omit<ParsedMission, "raw_input" | "parse_confidence">;
+  hint: string;
+  example: string;
+}[] = [
+  { name: "Payload mass",        key: "payload_mass_kg",                    hint: "Mass of your satellite or payload",          example: "45 kg" },
+  { name: "Orbit type",          key: "orbit_type",                         hint: "Target orbital regime",                      example: "LEO, SSO, GEO, GTO, MEO, HEO" },
+  { name: "Target altitude",     key: "target_altitude_km",                 hint: "Desired orbital altitude",                   example: "550 km" },
+  { name: "Budget ceiling",      key: "budget_usd",                         hint: "Maximum launch budget",                      example: "$2.5M" },
+  { name: "Max lead time",       key: "schedule_months",                    hint: "Months from contract to launch",             example: "12 months" },
+  { name: "Inclination control", key: "inclination_flexibility_required",   hint: "How precise your orbital plane must be",     example: "fixed, flexible, customer-defined" },
+];
+
+/** Return the REQUIRED_FIELDS entries whose corresponding ParsedMission value is null. */
+function getMissingFields(
+  mission: ParsedMission
+): typeof REQUIRED_FIELDS {
+  return REQUIRED_FIELDS.filter((f) => mission[f.key] === null);
 }
 
 // ---------------------------------------------------------------------------
@@ -61,10 +88,10 @@ function Stars() {
 function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex gap-3 text-sm">
-      <span className="w-48 shrink-0 text-slate-400">{label}</span>
-      <span className="text-slate-100 font-medium">
-        {value ?? <span className="text-slate-500 italic">—</span>}
-      </span>
+      <dt className="w-48 shrink-0 text-slate-400">{label}</dt>
+      <dd className="text-slate-100 font-medium m-0">
+        {value ?? <span className="text-slate-500 italic" aria-label="not specified">—</span>}
+      </dd>
     </div>
   );
 }
@@ -83,14 +110,24 @@ function ConfidenceBadge({ level }: { level: "high" | "medium" | "low" }) {
   );
 }
 
-function MissionCard({ mission }: { mission: ParsedMission }) {
+function MissionCard({
+  mission,
+  onImproveClick,
+}: {
+  mission: ParsedMission;
+  onImproveClick?: () => void;
+}) {
+  const missingFields = getMissingFields(mission);
+  const showNudge =
+    mission.parse_confidence !== "high" && missingFields.length > 0;
+
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-5 backdrop-blur">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-slate-100 font-semibold text-base">Parsed Mission Requirements</h2>
         <ConfidenceBadge level={mission.parse_confidence} />
       </div>
-      <div className="space-y-2">
+      <dl className="space-y-2">
         <FieldRow
           label="Payload mass"
           value={mission.payload_mass_kg != null ? `${mission.payload_mass_kg} kg` : null}
@@ -112,7 +149,27 @@ function MissionCard({ mission }: { mission: ParsedMission }) {
           label="Inclination flexibility"
           value={mission.inclination_flexibility_required}
         />
-      </div>
+      </dl>
+
+      {/* Tier-1 nudge: missing fields visible without any extra network call */}
+      {showNudge && (
+        <div className="mt-4 rounded-lg border border-amber-700/50 bg-amber-900/20 px-3 py-2.5 text-xs text-amber-300 space-y-1.5">
+          <p className="font-semibold">
+            Fields not found in your description:
+          </p>
+          <p className="text-amber-400/80 leading-relaxed">
+            {missingFields.map((f) => f.name).join(" · ")}
+          </p>
+          {onImproveClick && (
+            <button
+              onClick={onImproveClick}
+              className="mt-1 text-amber-300 underline underline-offset-2 hover:text-amber-200 transition-colors focus-visible:outline-2 focus-visible:outline-amber-400 focus-visible:outline-offset-2 rounded"
+            >
+              Improve my description ↑
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -124,13 +181,22 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
   return (
     <div className="space-y-0.5">
       <div className="flex justify-between text-xs text-slate-400">
-        <span>{label}</span>
-        <span>{score}</span>
+        <span id={`score-label-${label.replace(/\s+/g, "-").toLowerCase()}`}>{label}</span>
+        <span aria-hidden="true">{score}</span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-slate-700">
+      <div
+        role="progressbar"
+        aria-valuenow={score}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-labelledby={`score-label-${label.replace(/\s+/g, "-").toLowerCase()}`}
+        aria-valuetext={`${score} out of 100`}
+        className="h-1.5 w-full rounded-full bg-slate-700"
+      >
         <div
           className={`h-1.5 rounded-full ${color} transition-all`}
           style={{ width: `${score}%` }}
+          aria-hidden="true"
         />
       </div>
     </div>
@@ -199,24 +265,31 @@ function RankedVehicleCard({ match, isTop }: { match: RankedVehicle; isTop: bool
       {/* Score breakdown toggle */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="mt-3 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+        aria-expanded={open}
+        aria-controls={`breakdown-${rank}`}
+        className="mt-3 text-xs text-slate-500 hover:text-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
       >
-        {open ? "▲ Hide breakdown" : "▼ Score breakdown"}
+        <span aria-hidden="true">{open ? "▲" : "▼"}</span>{" "}
+        {open ? "Hide breakdown" : "Score breakdown"}
       </button>
-      {open && (
-        <div className="mt-2 space-y-2">
-          <ScoreBar label="Cost efficiency" score={score_breakdown.cost_score} />
-          <ScoreBar label="Schedule" score={score_breakdown.schedule_score} />
-          <ScoreBar label="Orbit precision" score={score_breakdown.orbit_score} />
-        </div>
-      )}
+      <div id={`breakdown-${rank}`} hidden={!open}>
+        {open && (
+          <div className="mt-2 space-y-2">
+            <ScoreBar label="Cost efficiency" score={score_breakdown.cost_score} />
+            <ScoreBar label="Schedule" score={score_breakdown.schedule_score} />
+            <ScoreBar label="Orbit precision" score={score_breakdown.orbit_score} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function CheckIcon({ ok }: { ok: boolean }) {
   return (
-    <span className={ok ? "text-emerald-400" : "text-rose-400"}>{ok ? "✓" : "✗"}</span>
+    <span className={ok ? "text-emerald-400" : "text-rose-400"} aria-hidden="true">
+      {ok ? "✓" : "✗"}
+    </span>
   );
 }
 
@@ -232,12 +305,28 @@ function EliminatedCard({ match }: { match: MatchedVehicle }) {
           ELIMINATED
         </span>
       </div>
-      <div className="grid grid-cols-4 gap-1 text-xs text-slate-500 mb-2">
-        <span><CheckIcon ok={match.passes_mass} /> Mass</span>
-        <span><CheckIcon ok={match.passes_orbit} /> Orbit</span>
-        <span><CheckIcon ok={match.passes_budget} /> Budget</span>
-        <span><CheckIcon ok={match.passes_schedule} /> Schedule</span>
-      </div>
+      <ul className="grid grid-cols-4 gap-1 text-xs text-slate-500 mb-2 list-none p-0">
+        <li>
+          <CheckIcon ok={match.passes_mass} />
+          <span className="sr-only">{match.passes_mass ? "Pass" : "Fail"}:</span>
+          {" "}Mass
+        </li>
+        <li>
+          <CheckIcon ok={match.passes_orbit} />
+          <span className="sr-only">{match.passes_orbit ? "Pass" : "Fail"}:</span>
+          {" "}Orbit
+        </li>
+        <li>
+          <CheckIcon ok={match.passes_budget} />
+          <span className="sr-only">{match.passes_budget ? "Pass" : "Fail"}:</span>
+          {" "}Budget
+        </li>
+        <li>
+          <CheckIcon ok={match.passes_schedule} />
+          <span className="sr-only">{match.passes_schedule ? "Pass" : "Fail"}:</span>
+          {" "}Schedule
+        </li>
+      </ul>
       {match.elimination_reason && (
         <p className="text-xs text-rose-400/80 border-t border-rose-900/30 pt-2">
           {match.elimination_reason}
@@ -268,47 +357,45 @@ function ExplanationPanel({ data }: { data: ExplainResponse }) {
 // Priority weight slider
 function WeightSlider({
   label,
+  plainLabel,
   description,
   value,
   onChange,
 }: {
-  label: string;
+  label: React.ReactNode;
+  plainLabel: string;
   description: string;
   value: number;
   onChange: (v: number) => void;
 }) {
+  const id = `weight-${plainLabel.toLowerCase().replace(/\s+/g, "-")}`;
+  const descId = `${id}-desc`;
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
-        <span className="text-slate-300 font-medium">{label}</span>
-        <span className="text-slate-400">{value}</span>
+        <label htmlFor={id} className="text-slate-300 font-medium">{label}</label>
+        <span className="text-slate-400" aria-hidden="true">{value}</span>
       </div>
       <input
+        id={id}
         type="range"
         min={0}
         max={5}
         step={1}
         value={value}
+        aria-valuetext={`${value} out of 5`}
+        aria-describedby={descId}
         onChange={(e) => onChange(Number(e.target.value))}
         className="w-full accent-sky-500"
       />
-      <p className="text-xs text-slate-500">{description}</p>
+      <p id={descId} className="text-xs text-slate-500">{description}</p>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Required fields hint
+// PromptFieldsHint
 // ---------------------------------------------------------------------------
-
-const REQUIRED_FIELDS: { name: string; hint: string; example: string }[] = [
-  { name: "Payload mass", hint: "Mass of your satellite or payload", example: "45 kg" },
-  { name: "Orbit type", hint: "Target orbital regime", example: "LEO, SSO, GEO, GTO, MEO, HEO" },
-  { name: "Target altitude", hint: "Desired orbital altitude", example: "550 km" },
-  { name: "Budget ceiling", hint: "Maximum launch budget", example: "$2.5M" },
-  { name: "Max lead time", hint: "Months from contract to launch", example: "12 months" },
-  { name: "Inclination control", hint: "How precise your orbital plane must be", example: "fixed, flexible, customer-defined" },
-];
 
 function PromptFieldsHint() {
   return (
@@ -327,6 +414,128 @@ function PromptFieldsHint() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ImprovePanel — Tier-2 "Improve my description" button + result display
+// ---------------------------------------------------------------------------
+
+function ImprovePanel({
+  description,
+  onUseRewrite,
+}: {
+  description: string;
+  onUseRewrite: (rewrite: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<ImproveResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleImprove() {
+    if (!description.trim()) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setOpen(true);
+
+    try {
+      const res = await fetch("/api/improve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description,
+          missing: REQUIRED_FIELDS.map((f) => f.key),
+        }),
+      });
+      if (!res.ok) throw new Error(`Improve failed: ${res.statusText}`);
+      const data: ImproveResponse = await res.json();
+      setResult(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const panelId = "improve-panel";
+
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={handleImprove}
+        disabled={loading || !description.trim()}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="px-4 py-2 rounded-lg border border-sky-600 bg-sky-900/30 hover:bg-sky-800/50 hover:border-sky-500 disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-600 disabled:cursor-not-allowed text-sm font-medium text-sky-300 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2"
+      >
+        {loading ? "Analyzing description…" : "Improve my description ✦"}
+      </button>
+
+      <div id={panelId} hidden={!open}>
+        {open && (
+          <div className="rounded-lg border border-slate-700 bg-slate-800/40 px-4 py-3 space-y-3 text-xs">
+            {error && (
+              <p role="alert" className="text-rose-400">
+                {error}
+              </p>
+            )}
+
+            {result && (
+              <>
+                {/* Missing fields list — matches PromptFieldsHint visual language */}
+                {result.missing_fields.length > 0 ? (
+                  <div className="space-y-1">
+                    <p className="font-semibold text-slate-400 uppercase tracking-wide">
+                      Missing or ambiguous fields
+                    </p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      {result.missing_fields.map((key) => {
+                        const field = REQUIRED_FIELDS.find((f) => f.key === key);
+                        const label = field?.name ?? key;
+                        return (
+                          <div key={key} className="flex items-center gap-1.5">
+                            <span className="shrink-0 w-2 h-2 rounded-full bg-amber-500/70" />
+                            <span className="text-slate-200">{label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-slate-400">All fields appear to be present.</p>
+                )}
+
+                {/* Suggested rewrite */}
+                {result.suggested_rewrite && (
+                  <div className="space-y-2">
+                    <p className="font-semibold text-slate-400 uppercase tracking-wide">
+                      Suggested rewrite
+                    </p>
+                    <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
+                      {result.suggested_rewrite}
+                    </p>
+                    <button
+                      onClick={() => onUseRewrite(result.suggested_rewrite!)}
+                      className="px-3 py-1.5 rounded bg-sky-700 hover:bg-sky-600 text-white font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-sky-400 focus-visible:outline-offset-2"
+                    >
+                      Use this
+                    </button>
+                  </div>
+                )}
+
+                {result.fallback && !result.suggested_rewrite && (
+                  <p className="text-slate-500 italic">
+                    *(AI rewrite unavailable — set GEMINI_API_KEY for a full suggested rewrite.)*
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -356,6 +565,13 @@ export default function Home() {
   const [sessions, setSessions] = useState<SessionRecord[]>(() =>
     typeof window !== "undefined" ? loadSessions() : []
   );
+
+  // Ref used to scroll/focus the textarea when "Improve my description ↑" is clicked
+  // from inside MissionCard (Tier-1 nudge)
+  function scrollToTextarea() {
+    document.getElementById("mission-desc")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.getElementById("mission-desc")?.focus();
+  }
 
   function setWeight(key: keyof PriorityWeights, value: number) {
     setWeights((w) => ({ ...w, [key]: value }));
@@ -449,12 +665,18 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen bg-slate-950 text-slate-100">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 px-4 py-2 rounded bg-sky-600 text-white text-sm font-semibold"
+      >
+        Skip to main content
+      </a>
       <Stars />
 
-      <main className="relative z-10 max-w-3xl mx-auto px-4 py-12 space-y-10">
+      <main id="main-content" className="relative z-10 max-w-3xl mx-auto px-4 py-12 space-y-10">
         {/* Header */}
         <header className="space-y-2">
-          <p className="text-xs font-semibold tracking-widest text-sky-400 uppercase">
+          <p className="text-xs font-semibold tracking-widest text-sky-400 uppercase" aria-hidden="true">
             IBM Builders Challenge · Mission Planning
           </p>
           <h1 className="text-3xl font-bold tracking-tight text-slate-50">
@@ -480,34 +702,43 @@ export default function Home() {
             onChange={(e) => setDescription(e.target.value)}
           />
 
+          {/* Tier-2: Improve my description button + result panel */}
+          <ImprovePanel
+            description={description}
+            onUseRewrite={(rewrite) => setDescription(rewrite)}
+          />
+
           <PromptFieldsHint />
 
           {/* Priority weight sliders */}
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 space-y-4">
-            <p className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
+          <fieldset className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 space-y-4">
+            <legend className="text-xs font-semibold text-slate-300 uppercase tracking-wide px-1">
               Mission Priorities
-            </p>
+            </legend>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <WeightSlider
-                label="💰 Cost"
+                label={<><span aria-hidden="true">💰 </span>Cost</>}
+                plainLabel="Cost"
                 description="Favour lower launch cost"
                 value={weights.cost}
                 onChange={(v) => setWeight("cost", v)}
               />
               <WeightSlider
-                label="⏱ Schedule"
+                label={<><span aria-hidden="true">⏱ </span>Schedule</>}
+                plainLabel="Schedule"
                 description="Favour shorter lead times"
                 value={weights.schedule}
                 onChange={(v) => setWeight("schedule", v)}
               />
               <WeightSlider
-                label="🎯 Orbit Precision"
+                label={<><span aria-hidden="true">🎯 </span>Orbit Precision</>}
+                plainLabel="Orbit Precision"
                 description="Favour custom inclination control"
                 value={weights.orbit_precision}
                 onChange={(v) => setWeight("orbit_precision", v)}
               />
             </div>
-          </div>
+          </fieldset>
 
           <button
             onClick={handleAnalyze}
@@ -520,7 +751,12 @@ export default function Home() {
 
         {/* Error */}
         {error && (
-          <div className="rounded-lg border border-rose-700 bg-rose-900/30 px-4 py-3 text-sm text-rose-300">
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="rounded-lg border border-rose-700 bg-rose-900/30 px-4 py-3 text-sm text-rose-300"
+          >
+            <span className="sr-only">Error: </span>
             {error}
           </div>
         )}
@@ -535,11 +771,11 @@ export default function Home() {
 
         {/* Results */}
         {mission && (
-          <section className="space-y-6">
+          <section aria-label="Analysis Results" className="space-y-6">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                 Analysis Results
-              </p>
+              </h2>
               <DownloadMenu
                 payload={{
                   mission,
@@ -549,29 +785,31 @@ export default function Home() {
                 }}
               />
             </div>
-            <MissionCard mission={mission} />
+
+            {/* Tier-1 nudge lives inside MissionCard; clicking "Improve ↑" scrolls to textarea */}
+            <MissionCard mission={mission} onImproveClick={scrollToTextarea} />
 
             {/* AI Explanation */}
             {explanation && <ExplanationPanel data={explanation} />}
 
             {/* Ranked viable vehicles */}
             {ranked && ranked.length > 0 && (
-              <div className="space-y-3">
+              <section aria-label="Ranked Launch Options" className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-slate-100 font-semibold text-base">Ranked Launch Options</h2>
-                  <span className="text-xs text-emerald-400 font-medium">
+                  <h3 className="text-slate-100 font-semibold text-base">Ranked Launch Options</h3>
+                  <span className="text-xs text-emerald-400 font-medium" aria-label={`${ranked.length} viable options`}>
                     {ranked.length} viable
                   </span>
                 </div>
                 {ranked.map((m) => (
                   <RankedVehicleCard key={m.entry.id} match={m} isTop={m.rank === 1} />
                 ))}
-              </div>
+              </section>
             )}
 
             {/* No viable options */}
             {ranked && ranked.length === 0 && (
-              <div className="rounded-xl border border-amber-700/60 bg-amber-900/20 px-5 py-4 text-sm text-amber-300">
+              <div role="status" className="rounded-xl border border-amber-700/60 bg-amber-900/20 px-5 py-4 text-sm text-amber-300">
                 No vehicles passed all constraints. Consider relaxing your budget, schedule, or orbit requirements.
               </div>
             )}
@@ -579,8 +817,8 @@ export default function Home() {
             {/* Eliminated vehicles (collapsible) */}
             {eliminated && eliminated.length > 0 && (
               <details className="group">
-                <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-300 transition-colors list-none">
-                  ▶ Show {eliminated.length} eliminated option{eliminated.length !== 1 ? "s" : ""}
+                <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-300 transition-colors list-none focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded">
+                  <span aria-hidden="true">▶ </span>Show {eliminated.length} eliminated option{eliminated.length !== 1 ? "s" : ""}
                 </summary>
                 <div className="mt-3 space-y-3">
                   {eliminated.map((m) => (

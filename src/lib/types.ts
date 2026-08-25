@@ -98,6 +98,13 @@ export interface ExplainResponse {
   fallback: boolean;     // true if Gemini was unavailable and a template was used
 }
 
+// Response from the /api/improve endpoint
+export interface ImproveResponse {
+  missing_fields: string[];        // names matching REQUIRED_FIELDS[].name
+  suggested_rewrite: string | null; // null when fallback (no LLM available)
+  fallback: boolean;
+}
+
 // A saved analysis session (persisted to localStorage)
 export interface SessionRecord {
   id: string;                   // UUID
