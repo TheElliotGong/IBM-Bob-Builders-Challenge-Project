@@ -83,13 +83,13 @@ export function UISettingsProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage after mount
   useEffect(() => {
-    setSettings(loadSettings());
+    setSettings(loadSettings()); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
 
   // Track system color scheme
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    setSystemDark(mq.matches);
+    setSystemDark(mq.matches); // eslint-disable-line react-hooks/set-state-in-effect
     const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);

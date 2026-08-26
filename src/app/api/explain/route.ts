@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { explainRecommendation } from "@/lib/explainer";
 import type { RankedVehicle, ParsedMission, PriorityWeights } from "@/lib/types";
+import { checkRateLimit } from "@/lib/rateLimit";
+
+const MAX_BODY_BYTES = 32_768;
 
 export async function POST(req: NextRequest) {
+  // Explain calls Gemini — use a stricter per-minute cap
+  const limited = checkRateLimit(req, { windowMs: 60_000, max: 10 });
+  if (limited) return limited;
+
   try {
+    const contentLength = Number(req.headers.get("content-length") ?? 0);
+    if (contentLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: "Request body too large" }, { status: 413 });
+    }
+
     const body = await req.json();
     const ranked: RankedVehicle[] = body?.ranked;
     const mission: ParsedMission = body?.mission;
@@ -20,7 +32,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await explainRecommendation(ranked, mission, weights);
+    // Cap ranked array to the top 10 to prevent artificially large payloads
+    const result = await explainRecommendation(ranked.slice(0, 10), mission, weights);
     return NextResponse.json(result);
   } catch (err) {
     console.error("[/api/explain]", err);

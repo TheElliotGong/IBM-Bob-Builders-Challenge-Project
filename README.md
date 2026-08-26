@@ -3,8 +3,13 @@
 An AI-powered mission-planning tool for the IBM Builders Challenge (Space Exploration track). Type a free-text satellite mission description and the pipeline parses your requirements, filters a curated launch-vehicle catalog, ranks options by your weighted priorities, and explains the trade-offs — all in one page.
 
 ---
+## Author
+* **Elliot Gong**
+* Github: [@TheElliotGong](https://github.com/TheElliotGong)
+* Website: [theelliotgong.com](https://theelliotgong.com)
+* Linkedin: [@ElliotGong](https://www.linkedin.com/in/elliot-gong/)
 
-## IBM AI Builders Challenge — August 2025
+## IBM AI Builders Challenge — August 2026
 
 ### Problem statement
 
