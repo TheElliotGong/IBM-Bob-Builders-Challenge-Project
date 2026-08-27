@@ -28,11 +28,12 @@ Return exactly this JSON structure:
 // Fallback builder (no API key, or on error)
 // ---------------------------------------------------------------------------
 
-function buildFallback(_text: string, missing: string[]): ImproveResponse {
+function buildFallback(_text: string, missing: string[], error?: string): ImproveResponse {
   return {
     missing_fields: missing,
     suggested_rewrite: null, // null per spec: LLM unavailable
     fallback: true,
+    ...(error ? { error } : {}),
   };
 }
 
@@ -74,7 +75,9 @@ export async function improveMissionDescription(
       suggested_rewrite: parsed.suggested_rewrite,
       fallback: false,
     };
-  } catch {
-    return buildFallback(text, missing);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[improver] Gemini call failed:", message);
+    return buildFallback(text, missing, message);
   }
 }
