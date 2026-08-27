@@ -6,7 +6,7 @@ Paste everything below into Bob as one task.
 
 ## Context
 
-This is the AI Launch Vehicle / Rideshare Selector (IBM Builders Challenge project). Users type a free-text mission description into a textarea on the home page; `POST /api/parse` sends it to Gemini (`src/lib/parser.ts`, model `gemini-2.0-flash`) which extracts six fields into a `ParsedMission` (payload mass, orbit type, target altitude, budget, schedule months, inclination flexibility) plus a `parse_confidence` of `"high" | "medium" | "low"`. When `GEMINI_API_KEY` isn't set, `parser.ts` falls back to a regex heuristic (`heuristicParse`) and confidence is capped at `"low"`.
+This is the Satellite Launch Vehicle / Rideshare Configurator (IBM Builders Challenge project). Users type a free-text mission description into a textarea on the home page; `POST /api/parse` sends it to Gemini (`src/lib/parser.ts`, model `gemini-2.0-flash`) which extracts six fields into a `ParsedMission` (payload mass, orbit type, target altitude, budget, schedule months, inclination flexibility) plus a `parse_confidence` of `"high" | "medium" | "low"`. When `GEMINI_API_KEY` isn't set, `parser.ts` falls back to a regex heuristic (`heuristicParse`) and confidence is capped at `"low"`.
 
 The UI already has two static aids next to the textarea in `src/app/page.tsx`: a `PLACEHOLDER` example string and a `PromptFieldsHint` component that lists the six `REQUIRED_FIELDS` (name/hint/example) the parser looks for. There is no dynamic help today — if a user writes something vague, they only find out after submitting, when `ConfidenceBadge` shows "LOW CONFIDENCE" and several `FieldRow`s in `MissionCard` render as `—`.
 

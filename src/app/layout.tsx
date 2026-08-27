@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Launch Vehicle Selector",
+  title: "Satellite Launch Vehicle / Rideshare Configurator",
   description:
     "AI-powered mission planning configurator — match your satellite mission requirements to the best rideshare or dedicated launch option.",
 };

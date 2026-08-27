@@ -705,7 +705,7 @@ export default function Home() {
                 IBM Builders Challenge · Mission Planning
               </p>
               <h1 className={`text-3xl font-bold tracking-tight ${resolvedTheme === "light" ? "text-slate-900" : "text-slate-50"}`}>
-                AI Launch Vehicle Selector
+                Satellite Launch Vehicle / Rideshare Configurator
               </h1>
               <p className={`text-sm leading-relaxed max-w-lg ${resolvedTheme === "light" ? "text-slate-600" : "text-slate-400"}`}>
                 Describe your mission in plain English. The AI pipeline will parse your requirements,
