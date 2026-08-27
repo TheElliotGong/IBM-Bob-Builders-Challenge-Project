@@ -103,6 +103,7 @@ export interface ImproveResponse {
   missing_fields: string[];        // names matching REQUIRED_FIELDS[].name
   suggested_rewrite: string | null; // null when fallback (no LLM available)
   fallback: boolean;
+  error?: string;                  // set when fallback was triggered by a real error
 }
 
 // A saved analysis session (persisted to localStorage)
