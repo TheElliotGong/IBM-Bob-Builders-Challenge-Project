@@ -86,7 +86,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Environment variables
 
-Copy `.env.local.example` to `.env.local` and fill in your key:
+Create a `.env` file in the project root and add your key:
 
 ```
 GEMINI_API_KEY=your_key_here
