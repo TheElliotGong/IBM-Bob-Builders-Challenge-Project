@@ -37,6 +37,7 @@ export interface LaunchVehicleEntry {
   status: "operational" | "retired" | "in-development";
   data_sources: string[];
   notes: string;
+  website_url?: string;
 }
 
 // Output of the LLM parser step
@@ -98,9 +99,17 @@ export interface ExplainResponse {
   fallback: boolean;     // true if Gemini was unavailable and a template was used
 }
 
+// A clarifying question for one missing field
+export interface ClarifyingQuestion {
+  field: string;   // key matching REQUIRED_FIELDS[].key
+  question: string; // human-readable question to ask the user
+  placeholder: string; // example input value
+}
+
 // Response from the /api/improve endpoint
 export interface ImproveResponse {
-  missing_fields: string[];        // names matching REQUIRED_FIELDS[].name
+  missing_fields: string[];        // names matching REQUIRED_FIELDS[].key
+  clarifying_questions: ClarifyingQuestion[]; // one per missing field
   suggested_rewrite: string | null; // null when fallback (no LLM available)
   fallback: boolean;
   error?: string;                  // set when fallback was triggered by a real error

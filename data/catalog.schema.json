@@ -181,6 +181,11 @@
     "notes": {
       "type": "string",
       "description": "Any additional free-text notes, caveats, or context relevant to mission planning."
+    },
+    "website_url": {
+      "type": "string",
+      "description": "Primary website URL for the launch provider or program (https://…).",
+      "format": "uri"
     }
   },
   "additionalProperties": false

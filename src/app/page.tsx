@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type {
   ParsedMission,
   RankedVehicle,
@@ -8,6 +8,7 @@ import type {
   PriorityWeights,
   ExplainResponse,
   ImproveResponse,
+  ClarifyingQuestion,
   SessionRecord,
 } from "@/lib/types";
 import DownloadMenu from "@/components/DownloadMenu";
@@ -264,16 +265,37 @@ function RankedVehicleCard({ match, isTop }: { match: RankedVehicle; isTop: bool
         </div>
       </div>
 
-      {/* Score breakdown toggle */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls={`breakdown-${rank}`}
-        className="mt-3 text-xs text-slate-500 hover:text-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
-      >
-        <span aria-hidden="true">{open ? "▲" : "▼"}</span>{" "}
-        {open ? "Hide breakdown" : "Score breakdown"}
-      </button>
+      {/* Notes — plain-text explanation (max 10 sentences enforced in catalog) */}
+      {entry.notes && (
+        <p className="mt-3 text-xs text-slate-400 leading-relaxed border-t border-slate-700/60 pt-3">
+          {entry.notes}
+        </p>
+      )}
+
+      {/* Footer: score breakdown toggle + provider website link */}
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls={`breakdown-${rank}`}
+          className="text-xs text-slate-500 hover:text-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
+        >
+          <span aria-hidden="true">{open ? "▲" : "▼"}</span>{" "}
+          {open ? "Hide breakdown" : "Score breakdown"}
+        </button>
+        {entry.website_url && (
+          <a
+            href={entry.website_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`text-xs hover:underline focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded ${
+              isTop ? "text-sky-400 hover:text-sky-300" : "text-emerald-400 hover:text-emerald-300"
+            }`}
+          >
+            Provider website ↗
+          </a>
+        )}
+      </div>
       <div id={`breakdown-${rank}`} hidden={!open}>
         {open && (
           <div className="mt-2 space-y-2">
@@ -342,6 +364,18 @@ function EliminatedCard({ match }: { match: MatchedVehicle }) {
         <p className="text-xs text-rose-400/80 border-t border-rose-900/30 pt-2">
           {match.elimination_reason}
         </p>
+      )}
+      {match.entry.website_url && (
+        <div className="mt-2 pt-2 border-t border-rose-900/20">
+          <a
+            href={match.entry.website_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-slate-500 hover:text-slate-400 hover:underline focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
+          >
+            Provider website ↗
+          </a>
+        </div>
       )}
     </div>
   );
@@ -431,6 +465,149 @@ function PromptFieldsHint() {
 }
 
 // ---------------------------------------------------------------------------
+// ImproveProgressBar — animated step tracker for the improve pipeline
+// ---------------------------------------------------------------------------
+
+const IMPROVE_STEPS = [
+  "Sending to AI",
+  "Analyzing fields",
+  "Generating rewrite",
+  "Done",
+] as const;
+
+function ImproveProgressBar({ step }: { step: number }) {
+  // step: 0 = idle/not started, 1..3 = in-progress steps, 4 = done
+  return (
+    <div aria-label="Improvement progress" className="space-y-1.5">
+      <div className="flex items-center gap-0">
+        {IMPROVE_STEPS.map((label, idx) => {
+          const stepNum = idx + 1;
+          const done = step > stepNum;
+          const active = step === stepNum;
+          const pending = step < stepNum;
+          return (
+            <div key={label} className="flex items-center flex-1 min-w-0">
+              {/* Node */}
+              <div
+                aria-current={active ? "step" : undefined}
+                className={`shrink-0 flex items-center justify-center w-5 h-5 rounded-full border text-xs font-bold transition-all
+                  ${done    ? "bg-emerald-600 border-emerald-500 text-white" : ""}
+                  ${active  ? "bg-sky-600 border-sky-400 text-white ring-2 ring-sky-500/40" : ""}
+                  ${pending ? "bg-slate-700 border-slate-600 text-slate-500" : ""}
+                `}
+              >
+                {done ? "✓" : stepNum}
+              </div>
+              {/* Connector line (skip after last) */}
+              {idx < IMPROVE_STEPS.length - 1 && (
+                <div
+                  className={`h-0.5 flex-1 mx-1 transition-all ${
+                    done ? "bg-emerald-600/60" : "bg-slate-700"
+                  }`}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {/* Labels row */}
+      <div className="flex">
+        {IMPROVE_STEPS.map((label, idx) => {
+          const stepNum = idx + 1;
+          const done = step > stepNum;
+          const active = step === stepNum;
+          return (
+            <div key={label} className="flex-1 min-w-0 text-center">
+              <span
+                className={`text-[10px] leading-tight block truncate transition-colors
+                  ${done   ? "text-emerald-400" : ""}
+                  ${active ? "text-sky-300 font-semibold" : ""}
+                  ${!done && !active ? "text-slate-600" : ""}
+                `}
+              >
+                {label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ClarifyingQuestionsForm — inputs for each missing field returned by the AI
+// ---------------------------------------------------------------------------
+
+function ClarifyingQuestionsForm({
+  questions,
+  onApply,
+}: {
+  questions: ClarifyingQuestion[];
+  onApply: (answers: Record<string, string>) => void;
+}) {
+  const [answers, setAnswers] = useState<Record<string, string>>(() =>
+    Object.fromEntries(questions.map((q) => [q.field, ""]))
+  );
+  const firstRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    firstRef.current?.focus();
+  }, []);
+
+  function handleChange(field: string, value: string) {
+    setAnswers((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    onApply(answers);
+  }
+
+  const anyFilled = Object.values(answers).some((v) => v.trim() !== "");
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        Answer the questions below to complete your description
+      </p>
+      <div className="space-y-2.5">
+        {questions.map((q, idx) => {
+          const fieldMeta = REQUIRED_FIELDS.find((f) => f.key === q.field);
+          return (
+            <div key={q.field} className="space-y-1">
+              <label
+                htmlFor={`clarify-${q.field}`}
+                className="block text-xs text-slate-300 font-medium"
+              >
+                {fieldMeta?.name ?? q.field}
+                <span className="ml-1 text-slate-500 font-normal">— {q.question}</span>
+              </label>
+              <input
+                ref={idx === 0 ? firstRef : undefined}
+                id={`clarify-${q.field}`}
+                type="text"
+                value={answers[q.field] ?? ""}
+                onChange={(e) => handleChange(q.field, e.target.value)}
+                placeholder={q.placeholder}
+                className="w-full rounded border border-slate-600 bg-slate-700/60 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              />
+            </div>
+          );
+        })}
+      </div>
+      <button
+        type="submit"
+        disabled={!anyFilled}
+        className="px-3 py-1.5 rounded bg-sky-700 hover:bg-sky-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-xs text-white font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-sky-400 focus-visible:outline-offset-2"
+      >
+        Apply answers to description
+      </button>
+    </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // ImprovePanel — Tier-2 "Improve my description" button + result display
 // ---------------------------------------------------------------------------
 
@@ -442,19 +619,22 @@ function ImprovePanel({
   onUseRewrite: (rewrite: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [progressStep, setProgressStep] = useState(0);
   const [result, setResult] = useState<ImproveResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const loading = progressStep > 0 && progressStep < 4;
+
   async function handleImprove() {
     if (!description.trim()) return;
-    setLoading(true);
     setError(null);
     setResult(null);
     setOpen(true);
+    setProgressStep(1); // "Sending to AI"
 
     try {
-      const res = await fetch("/api/improve", {
+      // Simulate step 2 ("Analyzing fields") just before the fetch resolves
+      const fetchPromise = fetch("/api/improve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -462,14 +642,44 @@ function ImprovePanel({
           missing: REQUIRED_FIELDS.map((f) => f.key),
         }),
       });
+
+      // Brief artificial delay so the "Sending to AI" step is visible
+      await new Promise<void>((r) => setTimeout(r, 300));
+      setProgressStep(2); // "Analyzing fields"
+
+      const res = await fetchPromise;
       if (!res.ok) throw new Error(`Improve failed: ${res.statusText}`);
+
+      setProgressStep(3); // "Generating rewrite"
       const data: ImproveResponse = await res.json();
+
+      // Brief pause so step 3 is visible
+      await new Promise<void>((r) => setTimeout(r, 200));
+
       setResult(data);
+      setProgressStep(4); // "Done"
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
-    } finally {
-      setLoading(false);
+      setProgressStep(0);
     }
+  }
+
+  /** Append the non-empty clarifying answers to the description and reset the panel. */
+  function handleApplyAnswers(answers: Record<string, string>) {
+    const lines = Object.entries(answers)
+      .filter(([, v]) => v.trim() !== "")
+      .map(([key, value]) => {
+        const fieldMeta = REQUIRED_FIELDS.find((f) => f.key === key);
+        const label = fieldMeta?.name ?? key;
+        return `${label}: ${value.trim()}`;
+      });
+    if (lines.length === 0) return;
+    const suffix = "\n\nAdditional details: " + lines.join("; ") + ".";
+    onUseRewrite(description + suffix);
+    // Reset panel so user can re-run improve on the updated description
+    setOpen(false);
+    setProgressStep(0);
+    setResult(null);
   }
 
   const panelId = "improve-panel";
@@ -483,12 +693,18 @@ function ImprovePanel({
         aria-controls={panelId}
         className="px-4 py-2 rounded-lg border border-sky-600 bg-sky-900/30 hover:bg-sky-800/50 hover:border-sky-500 disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-600 disabled:cursor-not-allowed text-sm font-medium text-sky-300 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2"
       >
-        {loading ? "Analyzing description…" : "Improve my description ✦"}
+        {loading ? "Analyzing…" : "Improve my description ✦"}
       </button>
 
       <div id={panelId} hidden={!open}>
         {open && (
-          <div className="rounded-lg border border-slate-700 bg-slate-800/40 px-4 py-3 space-y-3 text-xs">
+          <div className="rounded-lg border border-slate-700 bg-slate-800/40 px-4 py-3 space-y-4 text-xs">
+
+            {/* Progress bar — visible while in-flight or done */}
+            {progressStep > 0 && (
+              <ImproveProgressBar step={progressStep} />
+            )}
+
             {error && (
               <p role="alert" className="text-rose-400">
                 {error}
@@ -497,7 +713,7 @@ function ImprovePanel({
 
             {result && (
               <>
-                {/* Missing fields list — matches PromptFieldsHint visual language */}
+                {/* Missing fields chips */}
                 {result.missing_fields.length > 0 ? (
                   <div className="space-y-1">
                     <p className="font-semibold text-slate-400 uppercase tracking-wide">
@@ -518,6 +734,16 @@ function ImprovePanel({
                   </div>
                 ) : (
                   <p className="text-slate-400">All fields appear to be present.</p>
+                )}
+
+                {/* Clarifying questions form */}
+                {result.clarifying_questions.length > 0 && (
+                  <div className="rounded-lg border border-amber-700/40 bg-amber-900/10 px-3 py-3">
+                    <ClarifyingQuestionsForm
+                      questions={result.clarifying_questions}
+                      onApply={handleApplyAnswers}
+                    />
+                  </div>
                 )}
 
                 {/* Suggested rewrite */}

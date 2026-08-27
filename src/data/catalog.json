@@ -39,7 +39,8 @@
       "SpaceX Smallsat Rideshare Program page (spacex.com/rideshare)",
       "SpaceX Rideshare Payload User's Guide Rev 2.0"
     ],
-    "notes": "Fixed SSO inclination (~97.6°) at ~525 km; customer cannot choose altitude or inclination. Well-suited for constellations and earth-observation payloads that fit the SSO slot. Schedule is set by primary/anchor customer. Highest cadence rideshare program available."
+    "notes": "Fixed SSO inclination (~97.6°) at ~525 km; customer cannot choose altitude or inclination. Well-suited for constellations and earth-observation payloads that fit the SSO slot. Schedule is set by primary/anchor customer. Highest cadence rideshare program available.",
+    "website_url": "https://www.spacex.com/rideshare"
   },
   {
     "id": "rocketlab-electron",
@@ -81,7 +82,8 @@
       "Rocket Lab Electron Payload User's Guide (rocketlabusa.com)",
       "Rocket Lab investor presentations 2024"
     ],
-    "notes": "Sole dedicated small-launch vehicle with demonstrated high cadence from both Mahia (NZ) and Wallops (VA) launch sites. Customer chooses inclination, altitude, and LTAN freely. Ideal for payloads that cannot share an orbit with others or need a specific phasing. Kick Stage option enables highly elliptical or custom final orbits."
+    "notes": "Sole dedicated small-launch vehicle with demonstrated high cadence from both Mahia (NZ) and Wallops (VA) launch sites. Customer chooses inclination, altitude, and LTAN freely. Ideal for payloads that cannot share an orbit with others or need a specific phasing. Kick Stage option enables highly elliptical or custom final orbits.",
+    "website_url": "https://www.rocketlabusa.com/launch/electron"
   },
   {
     "id": "firefly-alpha",
@@ -123,7 +125,8 @@
       "Firefly Aerospace Alpha Payload User's Guide (fireflyspace.com)",
       "Firefly Alpha Launch Services Agreement template 2023"
     ],
-    "notes": "Largest payload capacity in the 'small dedicated' class. Launches from Vandenberg SLC-2. Good option when total manifest mass exceeds Electron's 300 kg ceiling but a full medium launch would be over-sized and over-priced. Cadence still maturing (first successful orbital launch 2023)."
+    "notes": "Largest payload capacity in the 'small dedicated' class. Launches from Vandenberg SLC-2. Good option when total manifest mass exceeds Electron's 300 kg ceiling but a full medium launch would be over-sized and over-priced. Cadence still maturing (first successful orbital launch 2023).",
+    "website_url": "https://fireflyspace.com/launch-services/alpha"
   },
   {
     "id": "arianespace-vega-c-ssms",
@@ -165,7 +168,8 @@
       "Arianespace Vega-C User's Manual Issue 0 Rev 0 (arianespace.com)",
       "ESA SSMS rideshare program documentation"
     ],
-    "notes": "European rideshare alternative to SpaceX Transporter. Larger total payload capacity per flight (700 kg to SSO) and more flexibility in cluster composition. Vega-C experienced a launch failure in Dec 2022; return-to-flight status should be verified before commitment. Launches from Kourou (French Guiana)."
+    "notes": "European rideshare alternative to SpaceX Transporter. Larger total payload capacity per flight (700 kg to SSO) and more flexibility in cluster composition. Vega-C experienced a launch failure in Dec 2022; return-to-flight status should be verified before commitment. Launches from Kourou (French Guiana).",
+    "website_url": "https://www.arianespace.com/vehicle/vega-c"
   },
   {
     "id": "isro-pslv-cl",
@@ -207,7 +211,8 @@
       "ISRO PSLV User's Manual (isro.gov.in)",
       "NewSpace India Limited commercial launch services (nsil.co.in)"
     ],
-    "notes": "Very cost-competitive rideshare option for SSO and mid-inclination LEO payloads. PSLV has an outstanding reliability record (50+ consecutive successes). Launches from Sriharikota, India. Lead times and procurement process can be longer than Western providers for non-Indian customers."
+    "notes": "Very cost-competitive rideshare option for SSO and mid-inclination LEO payloads. PSLV has an outstanding reliability record (50+ consecutive successes). Launches from Sriharikota, India. Lead times and procurement process can be longer than Western providers for non-Indian customers.",
+    "website_url": "https://www.nsil.co.in/launch-services"
   },
   {
     "id": "virgin-orbit-launcher-one",
@@ -249,7 +254,8 @@
       "Virgin Orbit LauncherOne Payload User's Guide Rev C (archived)",
       "Virgin Orbit bankruptcy proceedings April 2023 (public records)"
     ],
-    "notes": "RETIRED — included only for catalog completeness and historical cost-comparison reference. Virgin Orbit filed for bankruptcy in April 2023 and ceased all operations. Do not route live missions to this entry."
+    "notes": "RETIRED — included only for catalog completeness and historical cost-comparison reference. Virgin Orbit filed for bankruptcy in April 2023 and ceased all operations. Do not route live missions to this entry.",
+    "website_url": "https://en.wikipedia.org/wiki/Virgin_Orbit"
   },
   {
     "id": "exolaunch-rideshare-d-orbit",
@@ -291,6 +297,7 @@
       "D-Orbit ION Satellite Carrier product page (d-orbit.space)",
       "Exolaunch EXOpod / EXObox technical datasheet (exolaunch.com)"
     ],
-    "notes": "Orbital transfer vehicle (OTV) that rides as a rideshare payload and then independently delivers hosted smallsats to their precise final orbit. Solves the 'rideshare fixed orbit' limitation by adding propulsive last-mile capability. Higher total cost than a pure rideshare slot, but may be cheaper than booking a dedicated launch when the customer needs a non-standard altitude or local-solar-time."
+    "notes": "Orbital transfer vehicle (OTV) that rides as a rideshare payload and then independently delivers hosted smallsats to their precise final orbit. Solves the 'rideshare fixed orbit' limitation by adding propulsive last-mile capability. Higher total cost than a pure rideshare slot, but may be cheaper than booking a dedicated launch when the customer needs a non-standard altitude or local-solar-time.",
+    "website_url": "https://www.d-orbit.space/ion-satellite-carrier"
   }
 ]
