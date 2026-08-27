@@ -57,7 +57,7 @@ export async function improveMissionDescription(
     const userContent = `Mission description:\n${text}\n\nMissing or ambiguous fields: ${missing.join(", ") || "none identified — review for clarity"}`;
 
     const response = await client.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.6-flash",
       contents: userContent,
       config: {
         systemInstruction: SYSTEM_PROMPT,
