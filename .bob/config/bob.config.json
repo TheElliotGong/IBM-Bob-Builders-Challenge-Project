@@ -1,0 +1,28 @@
+{
+  "$schema": "https://ibm.com/bob/schema/config/v1",
+  "project": {
+    "name": "Satellite Launch Vehicle / Rideshare Configurator",
+    "description": "IBM AI Builders Challenge — Space Exploration track. An AI-powered mission-planning tool that parses free-text satellite mission descriptions and ranks launch vehicle options.",
+    "challenge": "IBM AI Builders Challenge — August 2026",
+    "track": "Space Exploration",
+    "author": "Elliot Gong"
+  },
+  "bob": {
+    "primaryTool": true,
+    "usedFor": [
+      "architecture-planning",
+      "code-generation",
+      "test-generation",
+      "ui-iteration",
+      "documentation"
+    ],
+    "modes": ["agent", "plan", "ask"]
+  },
+  "rules": [".bob/rules/project-rules.md"],
+  "context": {
+    "alwaysInclude": [
+      "data/catalog.json",
+      "src/lib/types.ts"
+    ]
+  }
+}

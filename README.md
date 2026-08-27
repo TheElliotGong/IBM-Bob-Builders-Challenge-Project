@@ -1,4 +1,4 @@
-# AI Launch Vehicle / Rideshare Selector
+# Satellite Launch Vehicle / Rideshare Configurator
 
 An AI-powered mission-planning tool for the IBM Builders Challenge (Space Exploration track). Type a free-text satellite mission description and the pipeline parses your requirements, filters a curated launch-vehicle catalog, ranks options by your weighted priorities, and explains the trade-offs — all in one page.
 
@@ -18,7 +18,7 @@ Small satellite and CubeSat missions typically begin with a frustrating, time-co
 
 ### Solution description
 
-The AI Launch Vehicle / Rideshare Selector is a single-page web application that collapses that multi-day research exercise into seconds. A user describes their mission in plain English; the tool parses the requirements into structured fields, filters a curated catalog of real launch vehicles and rideshare programmes, ranks the remaining options against the user's weighted priorities (cost, schedule, orbit precision), and returns a plain-language explanation of why the top pick wins and what the trade-offs are against the alternatives. An "Improve my description" panel identifies missing fields before submission, and a post-parse nudge surfaces gaps inline after submission — both paths push the user toward a better-specified mission without interrupting the workflow.
+The Satellite Launch Vehicle / Rideshare Configurator is a single-page web application that collapses that multi-day research exercise into seconds. A user describes their mission in plain English; the tool parses the requirements into structured fields, filters a curated catalog of real launch vehicles and rideshare programmes, ranks the remaining options against the user's weighted priorities (cost, schedule, orbit precision), and returns a plain-language explanation of why the top pick wins and what the trade-offs are against the alternatives. An "Improve my description" panel identifies missing fields before submission, and a post-parse nudge surfaces gaps inline after submission — both paths push the user toward a better-specified mission without interrupting the workflow.
 
 ### Pipeline overview
 
@@ -64,7 +64,7 @@ IBM Bob (the AI coding assistant embedded in the development environment) was us
 - **Improve my description** — identifies missing fields and returns a rewritten draft with bracketed prompts for gaps; a "Use this" button replaces the textarea content — never auto-submitted.
 - **Post-parse nudge** — after a low- or medium-confidence parse, the result card shows which fields were not found, with a one-click link back to the improve panel.
 - **Session history** — past analyses are saved to `localStorage` and can be restored or cleared.
-- **Export** — download results as JSON or Markdown.
+- **Export** — download results in six formats: JSON, Markdown, plain-text (TXT), CSV, PDF, and DOCX.
 
 ---
 
@@ -86,7 +86,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Environment variables
 
-Copy `.env.local.example` to `.env.local` and fill in your key:
+Create a `.env` file in the project root and add your key:
 
 ```
 GEMINI_API_KEY=your_key_here
@@ -101,9 +101,12 @@ Without `GEMINI_API_KEY` the app still works fully — see [AI approach](#ai-app
 | Method | Route | Purpose |
 |--------|-------|---------|
 | `POST` | `/api/parse` | Parse a mission description → `ParsedMission` |
-| `POST` | `/api/rank` | Filter catalog + score → `RankResponse` |
+| `POST` | `/api/filter` | Apply hard constraints to the catalog → `{ matches }` |
+| `POST` | `/api/rank` | Filter catalog + score → `RankResponse` (runs filter internally) |
 | `POST` | `/api/explain` | Generate trade-off explanation → `ExplainResponse` |
 | `POST` | `/api/improve` | Identify missing fields + optional rewrite → `ImproveResponse` |
+
+> **Note:** `/api/filter` is a standalone public endpoint for programmatic use. The UI calls `/api/rank`, which runs the filter step internally; calling `/api/filter` separately is not required for normal app operation.
 
 ---
 
@@ -118,7 +121,8 @@ src/
     page.tsx              Single-page UI
     api/
       parse/route.ts      Mission description parser endpoint
-      rank/route.ts       Filter + ranker endpoint
+      filter/route.ts     Hard-constraint catalog filter endpoint
+      rank/route.ts       Filter + ranker endpoint (filter runs internally)
       explain/route.ts    AI explanation endpoint
       improve/route.ts    Description improvement endpoint
   lib/
@@ -129,7 +133,7 @@ src/
     explainer.ts          Gemini explanation + template fallback
     improver.ts           Gemini description improver + fallback
   components/
-    DownloadMenu.tsx       JSON / Markdown export
+    DownloadMenu.tsx       Export (JSON, Markdown, TXT, CSV, PDF, DOCX)
     SessionHistoryPanel.tsx  localStorage session history
   __tests__/
     parser.test.ts

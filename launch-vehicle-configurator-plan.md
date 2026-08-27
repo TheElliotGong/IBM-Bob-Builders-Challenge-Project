@@ -1,4 +1,4 @@
-# AI Launch Vehicle / Rideshare Selector
+# Satellite Launch Vehicle / Rideshare Configurator
 ### IBM Builders Challenge with IBM Bob — August 2026: Mission Beyond Earth (Space Exploration)
 
 ---
