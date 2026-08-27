@@ -112,7 +112,7 @@ export async function explainRecommendation(
     const context = buildContext(ranked, mission, weights);
 
     const response = await client.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.6-flash",
       contents: context,
       config: {
         systemInstruction: SYSTEM_PROMPT,

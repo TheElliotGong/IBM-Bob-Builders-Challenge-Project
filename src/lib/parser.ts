@@ -130,7 +130,7 @@ export async function parseMissionDescription(
     const client = new GoogleGenAI({ apiKey });
 
     const response = await client.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.6-flash",
       contents: text,
       config: {
         systemInstruction: SYSTEM_PROMPT,

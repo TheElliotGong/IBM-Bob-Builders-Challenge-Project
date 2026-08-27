@@ -65,6 +65,43 @@ describe("improveMissionDescription — fallback (no API key)", () => {
     expect(result.fallback).toBe(true);
     expect(result.missing_fields).toHaveLength(0);
   });
+
+  it("returns clarifying_questions array (fallback)", async () => {
+    const result = await improveMissionDescription(
+      "small sat, cheap, soon",
+      ["payload_mass_kg", "budget_usd"]
+    );
+    expect(Array.isArray(result.clarifying_questions)).toBe(true);
+  });
+
+  it("returns one clarifying question per known missing field (fallback)", async () => {
+    const missing = ["payload_mass_kg", "orbit_type", "budget_usd"];
+    const { clarifying_questions } = await improveMissionDescription(
+      "some description",
+      missing
+    );
+    expect(clarifying_questions).toHaveLength(missing.length);
+    expect(clarifying_questions.map((q) => q.field)).toEqual(missing);
+  });
+
+  it("returns empty clarifying_questions when no fields are missing", async () => {
+    const { clarifying_questions } = await improveMissionDescription("some text", []);
+    expect(clarifying_questions).toHaveLength(0);
+  });
+
+  it("each clarifying question has field, question, and placeholder strings", async () => {
+    const { clarifying_questions } = await improveMissionDescription(
+      "some description",
+      ["schedule_months", "inclination_flexibility_required"]
+    );
+    for (const q of clarifying_questions) {
+      expect(typeof q.field).toBe("string");
+      expect(typeof q.question).toBe("string");
+      expect(typeof q.placeholder).toBe("string");
+      expect(q.question.length).toBeGreaterThan(0);
+      expect(q.placeholder.length).toBeGreaterThan(0);
+    }
+  });
 });
 
 describe("improveMissionDescription — Gemini error fallback", () => {
