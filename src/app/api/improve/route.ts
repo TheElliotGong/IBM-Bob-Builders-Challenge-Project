@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const description: unknown = body?.description;
     const missing: unknown = body?.missing ?? [];
+    const model: string = typeof body?.model === "string" ? body.model : "gemini-3.6-flash";
 
     if (!description || typeof description !== "string") {
       return NextResponse.json(
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
       .filter((x): x is string => typeof x === "string")
       .slice(0, MAX_MISSING_ITEMS);
 
-    const result = await improveMissionDescription(description, missingStrings);
+    const result = await improveMissionDescription(description, missingStrings, model);
     return NextResponse.json(result);
   } catch (err) {
     console.error("[/api/improve]", err);

@@ -15,11 +15,22 @@ import {
 
 export type Theme = "dark" | "light" | "system";
 export type Density = "compact" | "default" | "spacious";
+export type GeminiModel =
+  | "gemini-3.6-flash"
+  | "gemini-3.5-flash"
+  | "gemini-3.1-flash";
+
+export const GEMINI_MODELS: { id: GeminiModel; label: string }[] = [
+  { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash Lite" },
+  { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash Lite" },
+  { id: "gemini-3.1-flash", label: "Gemini 3.1 Flash Lite" },
+];
 
 export interface UISettings {
   theme: Theme;
   density: Density;
   language: string; // BCP-47 locale tag, e.g. "en-US"
+  geminiModel: GeminiModel;
 }
 
 interface UISettingsContextValue {
@@ -39,6 +50,7 @@ const DEFAULT_SETTINGS: UISettings = {
   theme: "system",
   density: "default",
   language: "en-US",
+  geminiModel: "gemini-3.6-flash",
 };
 
 export const SUPPORTED_LANGUAGES: { tag: string; label: string }[] = [

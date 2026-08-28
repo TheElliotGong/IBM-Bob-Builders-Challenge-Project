@@ -2,6 +2,7 @@
  * Tests for the fallback improvement path (no GEMINI_API_KEY set).
  */
 import { improveMissionDescription } from "@/lib/improver";
+import { __queueError, __reset } from "./helpers/genaiMock";
 
 beforeAll(() => {
   delete process.env.GEMINI_API_KEY;
@@ -105,24 +106,31 @@ describe("improveMissionDescription — fallback (no API key)", () => {
 });
 
 describe("improveMissionDescription — Gemini error fallback", () => {
+  let consoleError: jest.SpyInstance;
+
   beforeEach(() => {
-    // Simulate a bad API key so the import path is exercised but the call fails
-    process.env.GEMINI_API_KEY = "invalid-key-will-fail";
+    __reset();
+    process.env.GEMINI_API_KEY = "test-key";
+    consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
     delete process.env.GEMINI_API_KEY;
+    consoleError.mockRestore();
   });
 
-  it("falls back gracefully when the Gemini call throws", async () => {
-    // With a bad key the generateContent call will either throw or return bad JSON —
-    // either way buildFallback must kick in and return fallback: true
-    const result = await improveMissionDescription(
-      "small sat cheap soon",
-      ["payload_mass_kg", "budget_usd"]
-    );
-    // The call may succeed or fall back; either is valid — just must not throw
-    expect(typeof result.fallback).toBe("boolean");
-    expect(Array.isArray(result.missing_fields)).toBe(true);
+  it("falls back to the static questions when the Gemini call throws", async () => {
+    __queueError("401 Unauthorized — invalid API key");
+
+    const result = await improveMissionDescription("small sat cheap soon", [
+      "payload_mass_kg",
+      "budget_usd",
+    ]);
+
+    expect(result.fallback).toBe(true);
+    expect(result.suggested_rewrite).toBeNull();
+    expect(result.missing_fields).toEqual(["payload_mass_kg", "budget_usd"]);
+    expect(result.clarifying_questions).toHaveLength(2);
+    expect(result.error).toMatch(/401/);
   });
 });

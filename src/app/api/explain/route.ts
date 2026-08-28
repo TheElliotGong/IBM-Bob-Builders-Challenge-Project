@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       schedule: 1,
       orbit_precision: 1,
     };
+    const model: string = typeof body?.model === "string" ? body.model : "gemini-3.6-flash";
 
     if (!ranked || !Array.isArray(ranked) || !mission) {
       return NextResponse.json(
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Cap ranked array to the top 10 to prevent artificially large payloads
-    const result = await explainRecommendation(ranked.slice(0, 10), mission, weights);
+    const result = await explainRecommendation(ranked.slice(0, 10), mission, weights, model);
     return NextResponse.json(result);
   } catch (err) {
     console.error("[/api/explain]", err);

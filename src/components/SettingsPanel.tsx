@@ -4,8 +4,10 @@ import { useEffect, useRef } from "react";
 import {
   useUISettings,
   SUPPORTED_LANGUAGES,
+  GEMINI_MODELS,
   type Theme,
   type Density,
+  type GeminiModel,
 } from "@/lib/uiSettings";
 
 // ---------------------------------------------------------------------------
@@ -200,6 +202,40 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
               Affects date, time, and number formatting across the app.
             </p>
           </div>
+
+          {/* AI Model */}
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              AI Model
+            </legend>
+            <div className="space-y-1.5 pt-1">
+              {GEMINI_MODELS.map((m) => (
+                <label
+                  key={m.id}
+                  className={`
+                    flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer border transition-colors
+                    ${settings.geminiModel === m.id
+                      ? "bg-sky-600/20 border-sky-600/60 text-sky-300"
+                      : "bg-slate-800/60 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200"
+                    }
+                  `}
+                >
+                  <input
+                    type="radio"
+                    name="geminiModel"
+                    value={m.id}
+                    checked={settings.geminiModel === m.id}
+                    onChange={() => setSetting("geminiModel", m.id as GeminiModel)}
+                    className="sr-only"
+                  />
+                  <span className="text-xs font-medium">{m.label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Model used for parsing, explanation, and description improvement.
+            </p>
+          </fieldset>
 
         </div>
 

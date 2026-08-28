@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const description: string = body?.description;
+    const model: string = typeof body?.model === "string" ? body.model : "gemini-3.6-flash";
 
     if (!description || typeof description !== "string") {
       return NextResponse.json(
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const parsed = await parseMissionDescription(description);
+    const parsed = await parseMissionDescription(description, model);
     return NextResponse.json(parsed);
   } catch (err) {
     console.error("[/api/parse]", err);

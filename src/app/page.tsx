@@ -613,11 +613,14 @@ function ClarifyingQuestionsForm({
 
 function ImprovePanel({
   description,
+  parsedMission,
   onUseRewrite,
 }: {
   description: string;
+  parsedMission?: ParsedMission | null;
   onUseRewrite: (rewrite: string) => void;
 }) {
+  const { settings: improveSettings } = useUISettings();
   const [open, setOpen] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
   const [result, setResult] = useState<ImproveResponse | null>(null);
@@ -633,13 +636,19 @@ function ImprovePanel({
     setProgressStep(1); // "Sending to AI"
 
     try {
+      // Compute which fields are actually missing (or all if no parsed result yet)
+      const missingKeys = parsedMission
+        ? getMissingFields(parsedMission).map((f) => f.key)
+        : REQUIRED_FIELDS.map((f) => f.key);
+
       // Simulate step 2 ("Analyzing fields") just before the fetch resolves
       const fetchPromise = fetch("/api/improve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           description,
-          missing: REQUIRED_FIELDS.map((f) => f.key),
+          missing: missingKeys,
+          model: improveSettings.geminiModel,
         }),
       });
 
@@ -855,7 +864,7 @@ export default function Home() {
       const parseRes = await fetch("/api/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description }),
+        body: JSON.stringify({ description, model: settings.geminiModel }),
       });
       if (!parseRes.ok) throw new Error(`Parse failed: ${parseRes.statusText}`);
       const parsedMission: ParsedMission = await parseRes.json();
@@ -878,7 +887,7 @@ export default function Home() {
       const explainRes = await fetch("/api/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ranked: rankedVehicles, mission: parsedMission, weights }),
+        body: JSON.stringify({ ranked: rankedVehicles, mission: parsedMission, weights, model: settings.geminiModel }),
       });
       if (!explainRes.ok) throw new Error(`Explain failed: ${explainRes.statusText}`);
       const explainData: ExplainResponse = await explainRes.json();
@@ -973,6 +982,7 @@ export default function Home() {
           {/* Tier-2: Improve my description button + result panel */}
           <ImprovePanel
             description={description}
+            parsedMission={mission}
             onUseRewrite={(rewrite) => setDescription(rewrite)}
           />
 
