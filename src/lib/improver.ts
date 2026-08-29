@@ -20,15 +20,22 @@ const SYSTEM_PROMPT = `You are a mission-description editor for a launch vehicle
 Given a user's mission description and a list of fields that are missing or ambiguous, return ONLY valid JSON — no markdown, no explanation.
 
 Your tasks:
-1. Identify which of the six required fields are missing or ambiguous: payload_mass_kg, orbit_type, target_altitude_km, budget_usd, schedule_months, inclination_flexibility_required.
-2. For each missing field, produce a short, friendly clarifying question the user can answer directly, plus a concise placeholder example value.
-3. Return a rewritten version of the description that preserves every fact the user already stated.
+1. Carefully read the description and infer as many of the six required fields as possible from natural language, even when values are expressed informally.
+   - payload_mass_kg: any mass/weight value in kg, lbs, tonnes, etc. (convert to kg). "70kg satellite" → 70.
+   - orbit_type: any orbital regime — "LEO", "SSO", "MEO", "GEO", "GTO", "HEO", "any". Infer from context: "low earth orbit" → LEO, "geostationary" → GEO, "MEO orbit" → MEO, "bound for Jupiter/Mars/deep space" → HEO or note as interplanetary.
+   - target_altitude_km: any altitude value in km or miles (convert to km). "800km MEO orbit" → 800.
+   - budget_usd: any monetary value. "$15 million" → 15000000, "$15M" → 15000000, "fifteen million dollars" → 15000000.
+   - schedule_months: any time constraint in months or years. "within 2 years" → 24, "6 months" → 6, "launch in 18 months" → 18.
+   - inclination_flexibility_required: "fixed", "limited", "customer-defined", or "any". "flexible inclination" → "any", "inclination control is flexible" → "any", "specific inclination required" → "customer-defined", "any inclination" → "any".
+2. Only list a field as missing if it truly cannot be inferred from the description. If the user said it in plain language, do NOT list it as missing.
+3. For each genuinely missing field, produce a short, friendly clarifying question the user can answer directly, plus a concise placeholder example value.
+4. Return a rewritten version of the description that preserves every fact the user already stated.
    For each missing field, insert a bracketed prompt in place of the value, e.g. "[budget not specified — add a $ ceiling]".
    Do not invent numbers or facts. Do not remove any information the user provided.
 
 Return exactly this JSON structure:
 {
-  "missing_fields": [<array of field key strings that are missing or ambiguous>],
+  "missing_fields": [<array of field key strings that are truly missing or ambiguous>],
   "clarifying_questions": [
     { "field": "<field key>", "question": "<one-sentence question>", "placeholder": "<example answer>" }
   ],
@@ -89,7 +96,8 @@ function buildFallback(_text: string, missing: string[], error?: string): Improv
 // ---------------------------------------------------------------------------
 export async function improveMissionDescription(
   text: string,
-  missing: string[]
+  missing: string[],
+  model = "gemini-3.6-flash"
 ): Promise<ImproveResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -104,12 +112,12 @@ export async function improveMissionDescription(
     const userContent = `Mission description:\n${text}\n\nMissing or ambiguous fields: ${missing.join(", ") || "none identified — review for clarity"}`;
 
     const response = await client.models.generateContent({
-      model: "gemini-2.0-flash",
+      model,
       contents: userContent,
       config: {
         systemInstruction: SYSTEM_PROMPT,
         temperature: 0.3,
-        maxOutputTokens: 15000,
+        maxOutputTokens: 5000,
         responseMimeType: "application/json",
       },
     });

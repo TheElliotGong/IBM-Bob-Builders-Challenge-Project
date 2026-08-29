@@ -97,7 +97,8 @@ function buildFallback(ranked: RankedVehicle[], mission: ParsedMission): string 
 export async function explainRecommendation(
   ranked: RankedVehicle[],
   mission: ParsedMission,
-  weights: PriorityWeights
+  weights: PriorityWeights,
+  model = "gemini-3.6-flash"
 ): Promise<ExplainResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -112,7 +113,7 @@ export async function explainRecommendation(
     const context = buildContext(ranked, mission, weights);
 
     const response = await client.models.generateContent({
-      model: "gemini-3.6-flash",
+      model,
       contents: context,
       config: {
         systemInstruction: SYSTEM_PROMPT,
@@ -121,7 +122,11 @@ export async function explainRecommendation(
       },
     });
 
-    const explanation = response.text?.trim() ?? buildFallback(ranked, mission);
+    const explanation = response.text?.trim();
+    if (!explanation) {
+      // Empty/blank completion is as unusable as a thrown error — say so.
+      return { explanation: buildFallback(ranked, mission), fallback: true };
+    }
     return { explanation, fallback: false };
   } catch {
     return { explanation: buildFallback(ranked, mission), fallback: true };

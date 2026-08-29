@@ -73,7 +73,7 @@ export default function SessionHistoryPanel({
     <section aria-label="Session History" className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        <h2 className="text-xs lg:text-sm font-semibold text-slate-400 uppercase tracking-wide">
           Session History
           <span className="ml-2 text-slate-600 font-normal normal-case tracking-normal" aria-label={`(${sessions.length} sessions)`}>
             ({sessions.length})
@@ -82,7 +82,7 @@ export default function SessionHistoryPanel({
         <button
           onClick={onClearAll}
           aria-label="Clear all session history"
-          className="text-xs text-slate-600 hover:text-rose-400 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
+          className="text-xs lg:text-sm text-slate-600 hover:text-rose-400 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
         >
           Clear all
         </button>
@@ -138,13 +138,13 @@ function SessionCard({
   const viableCount = session.ranked.length;
 
   return (
-    <div role="listitem" className="snap-start shrink-0 w-52 rounded-xl border border-slate-700 bg-slate-800/70 backdrop-blur flex flex-col overflow-hidden">
+    <div role="listitem" className="snap-start shrink-0 w-52 lg:w-60 rounded-xl border border-slate-700 bg-slate-800/70 backdrop-blur flex flex-col overflow-hidden">
       {/* Colour accent bar */}
       <div className="h-1 w-full bg-gradient-to-r from-sky-600 to-indigo-600" aria-hidden="true" />
 
       <div className="p-3 flex flex-col gap-2 flex-1">
         {/* Timestamp */}
-        <p className="text-[10px] text-slate-500">
+        <p className="text-[10px] lg:text-xs text-slate-500">
           {dateStr} · {timeStr}
         </p>
 
@@ -152,13 +152,13 @@ function SessionCard({
         <div className="min-h-[2.5rem]">
           {topVehicle ? (
             <>
-              <p className="text-xs font-semibold text-sky-300 leading-tight truncate">
+              <p className="text-xs lg:text-sm font-semibold text-sky-300 leading-tight truncate">
                 {topVehicle.vehicle}
               </p>
-              <p className="text-[10px] text-slate-500 truncate">{topVehicle.provider}</p>
+              <p className="text-[10px] lg:text-xs text-slate-500 truncate">{topVehicle.provider}</p>
             </>
           ) : (
-            <p className="text-xs text-slate-500 italic">No viable options</p>
+            <p className="text-xs lg:text-sm text-slate-500 italic">No viable options</p>
           )}
         </div>
 
@@ -170,7 +170,7 @@ function SessionCard({
         </div>
 
         {/* Truncated prompt */}
-        <p className="text-[10px] text-slate-600 leading-snug line-clamp-2 flex-1">
+        <p className="text-[10px] lg:text-xs text-slate-600 leading-snug line-clamp-2 flex-1">
           {session.description}
         </p>
       </div>
@@ -180,7 +180,7 @@ function SessionCard({
         <button
           onClick={() => onRestore(session)}
           aria-label={`Restore session from ${dateStr} — ${topVehicle?.vehicle ?? "no viable options"}`}
-          className="flex-1 py-1.5 text-xs text-sky-400 hover:bg-slate-700 transition-colors font-medium focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-[-2px]"
+          className="flex-1 py-1.5 lg:py-2 text-xs lg:text-sm text-sky-400 hover:bg-slate-700 transition-colors font-medium focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-[-2px]"
         >
           Restore
         </button>
@@ -188,7 +188,7 @@ function SessionCard({
         <button
           onClick={() => onDelete(session.id)}
           aria-label={`Delete session from ${dateStr}`}
-          className="px-3 py-1.5 text-xs text-slate-500 hover:text-rose-400 hover:bg-slate-700 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-[-2px]"
+          className="px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-slate-500 hover:text-rose-400 hover:bg-slate-700 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-[-2px]"
         >
           <span aria-hidden="true">✕</span>
         </button>
@@ -199,7 +199,7 @@ function SessionCard({
 
 function StatChip({ label }: { label: string }) {
   return (
-    <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/80 text-slate-400 font-medium">
+    <span className="text-[10px] lg:text-xs px-1.5 py-0.5 rounded bg-slate-700/80 text-slate-400 font-medium">
       {label}
     </span>
   );
