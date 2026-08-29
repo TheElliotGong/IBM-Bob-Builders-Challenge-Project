@@ -18,13 +18,13 @@ export default function SettingsSidebar() {
 
   return (
     <aside
-      aria-label="UI Settings"
+      aria-label="Settings"
       className="w-64 shrink-0 space-y-6"
     >
       <div className="sticky top-8 rounded-xl border border-slate-700 bg-slate-900 overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b border-slate-700">
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">UI Settings</h2>
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">Settings</h2>
         </div>
 
         {/* Body */}

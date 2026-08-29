@@ -83,7 +83,7 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="UI Settings"
+        aria-label="Settings"
         className={`
           fixed top-0 right-0 z-50 h-full w-80 max-w-full
           bg-slate-900 border-l border-slate-700 shadow-2xl
@@ -94,7 +94,7 @@ export default function SettingsPanel({ open, onClose }: SettingsPanelProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
-          <h2 className="text-sm font-semibold text-slate-100">UI Settings</h2>
+          <h2 className="text-lg font-semibold text-slate-100">Settings</h2>
           <button
             ref={closeRef}
             onClick={onClose}
