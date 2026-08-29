@@ -18,6 +18,7 @@ import SessionHistoryPanel, {
   deleteSession,
   clearAllSessions,
 } from "@/components/SessionHistoryPanel";
+import SettingsSidebar from "@/components/SettingsSidebar";
 import SettingsPanel from "@/components/SettingsPanel";
 import { useUISettings } from "@/lib/uiSettings";
 
@@ -90,7 +91,7 @@ function Stars() {
 
 function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex gap-3 text-sm">
+    <div className="flex gap-3 text-sm lg:text-base">
       <dt className="w-48 shrink-0 text-slate-400">{label}</dt>
       <dd className="text-slate-100 font-medium m-0">
         {value ?? <span className="text-slate-500 italic" aria-label="not specified">—</span>}
@@ -107,7 +108,7 @@ function ConfidenceBadge({ level }: { level: "high" | "medium" | "low" }) {
       ? "bg-amber-900/60 text-amber-300 border-amber-700"
       : "bg-rose-900/60 text-rose-300 border-rose-700";
   return (
-    <span className={`px-2 py-0.5 text-xs rounded border font-semibold ${colors}`}>
+    <span className={`px-2 py-0.5 text-xs lg:px-2.5 lg:py-1 lg:text-sm rounded border font-semibold ${colors}`}>
       {level.toUpperCase()} CONFIDENCE
     </span>
   );
@@ -127,7 +128,7 @@ function MissionCard({
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-5 backdrop-blur">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-slate-100 font-semibold text-base">Parsed Mission Requirements</h2>
+        <h2 className="text-slate-100 font-semibold text-base lg:text-lg">Parsed Mission Requirements</h2>
         <ConfidenceBadge level={mission.parse_confidence} />
       </div>
       <dl className="space-y-2">
@@ -156,7 +157,7 @@ function MissionCard({
 
       {/* Tier-1 nudge: missing fields visible without any extra network call */}
       {showNudge && (
-        <div className="mt-4 rounded-lg border border-amber-700/50 bg-amber-900/20 px-3 py-2.5 text-xs text-amber-300 space-y-1.5">
+        <div className="mt-4 rounded-lg border border-amber-700/50 bg-amber-900/20 px-3 py-2.5 text-xs lg:text-sm text-amber-300 space-y-1.5">
           <p className="font-semibold">
             Fields not found in your description:
           </p>
@@ -183,7 +184,7 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
     score >= 70 ? "bg-emerald-500" : score >= 40 ? "bg-amber-500" : "bg-rose-500";
   return (
     <div className="space-y-0.5">
-      <div className="flex justify-between text-xs text-slate-400">
+      <div className="flex justify-between text-xs lg:text-sm text-slate-400">
         <span id={`score-label-${label.replace(/\s+/g, "-").toLowerCase()}`}>{label}</span>
         <span aria-hidden="true">{score}</span>
       </div>
@@ -194,10 +195,10 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
         aria-valuemax={100}
         aria-labelledby={`score-label-${label.replace(/\s+/g, "-").toLowerCase()}`}
         aria-valuetext={`${score} out of 100`}
-        className="h-1.5 w-full rounded-full bg-slate-700"
+        className="h-2 w-full rounded-full bg-slate-700"
       >
         <div
-          className={`h-1.5 rounded-full ${color} transition-all`}
+          className={`h-2 rounded-full ${color} transition-all`}
           style={{ width: `${score}%` }}
           aria-hidden="true"
         />
@@ -220,7 +221,7 @@ function RankedVehicleCard({ match, isTop }: { match: RankedVehicle; isTop: bool
         <div className="flex items-center gap-3">
           {/* Rank badge */}
           <span
-            className={`shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+            className={`shrink-0 flex items-center justify-center w-7 h-7 lg:w-9 lg:h-9 rounded-full text-xs lg:text-sm font-bold ${
               isTop
                 ? "bg-sky-600 text-white"
                 : "bg-slate-700 text-slate-300"
@@ -229,35 +230,35 @@ function RankedVehicleCard({ match, isTop }: { match: RankedVehicle; isTop: bool
             #{rank}
           </span>
           <div>
-            <p className={`font-semibold text-sm ${isTop ? "text-sky-200" : "text-emerald-200"}`}>
+            <p className={`font-semibold text-sm lg:text-base ${isTop ? "text-sky-200" : "text-emerald-200"}`}>
               {entry.vehicle}
             </p>
-            <p className="text-slate-400 text-xs">{entry.provider} · {entry.type}</p>
+            <p className="text-slate-400 text-xs lg:text-sm">{entry.provider} · {entry.type}</p>
           </div>
         </div>
 
         {/* Overall score chip */}
         <div className="shrink-0 text-right">
-          <p className="text-xs text-slate-400">Score</p>
-          <p className={`text-lg font-bold ${isTop ? "text-sky-300" : "text-emerald-300"}`}>
+          <p className="text-xs lg:text-sm text-slate-400">Score</p>
+          <p className={`text-lg lg:text-xl font-bold ${isTop ? "text-sky-300" : "text-emerald-300"}`}>
             {score}
           </p>
         </div>
       </div>
 
       {/* Key stats */}
-      <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-        <div className="rounded-lg bg-slate-700/50 px-2 py-1.5 text-center">
+      <div className="mt-3 grid grid-cols-3 gap-2 text-xs lg:text-sm">
+        <div className="rounded-lg bg-slate-700/50 px-2 py-1.5 lg:py-2 text-center">
           <p className="text-slate-400 mb-0.5">Est. Cost</p>
           <p className="text-slate-100 font-medium">{fmtUsd(estimated_cost_usd)}</p>
         </div>
-        <div className="rounded-lg bg-slate-700/50 px-2 py-1.5 text-center">
+        <div className="rounded-lg bg-slate-700/50 px-2 py-1.5 lg:py-2 text-center">
           <p className="text-slate-400 mb-0.5">Lead Time</p>
           <p className="text-slate-100 font-medium">
             {entry.integration.lead_time_months.min}–{entry.integration.lead_time_months.max} mo
           </p>
         </div>
-        <div className="rounded-lg bg-slate-700/50 px-2 py-1.5 text-center">
+        <div className="rounded-lg bg-slate-700/50 px-2 py-1.5 lg:py-2 text-center">
           <p className="text-slate-400 mb-0.5">Inclination</p>
           <p className="text-slate-100 font-medium capitalize">
             {entry.orbit_options.inclination_flexibility}
@@ -267,7 +268,7 @@ function RankedVehicleCard({ match, isTop }: { match: RankedVehicle; isTop: bool
 
       {/* Notes — plain-text explanation (max 10 sentences enforced in catalog) */}
       {entry.notes && (
-        <p className="mt-3 text-xs text-slate-400 leading-relaxed border-t border-slate-700/60 pt-3">
+        <p className="mt-3 text-xs lg:text-sm text-slate-400 leading-relaxed border-t border-slate-700/60 pt-3">
           {entry.notes}
         </p>
       )}
@@ -278,7 +279,7 @@ function RankedVehicleCard({ match, isTop }: { match: RankedVehicle; isTop: bool
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-controls={`breakdown-${rank}`}
-          className="text-xs text-slate-500 hover:text-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
+          className="text-xs lg:text-sm text-slate-500 hover:text-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
         >
           <span aria-hidden="true">{open ? "▲" : "▼"}</span>{" "}
           {open ? "Hide breakdown" : "Score breakdown"}
@@ -288,7 +289,7 @@ function RankedVehicleCard({ match, isTop }: { match: RankedVehicle; isTop: bool
             href={entry.website_url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`text-xs hover:underline focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded ${
+            className={`text-xs lg:text-sm hover:underline focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded ${
               isTop ? "text-sky-400 hover:text-sky-300" : "text-emerald-400 hover:text-emerald-300"
             }`}
           >
@@ -309,15 +310,6 @@ function RankedVehicleCard({ match, isTop }: { match: RankedVehicle; isTop: bool
   );
 }
 
-function GearIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-    </svg>
-  );
-}
-
 function CheckIcon({ ok }: { ok: boolean }) {
   return (
     <span className={ok ? "text-emerald-400" : "text-rose-400"} aria-hidden="true">
@@ -331,14 +323,14 @@ function EliminatedCard({ match }: { match: MatchedVehicle }) {
     <div className="rounded-xl border border-rose-700/40 bg-slate-800/40 p-4 backdrop-blur opacity-70">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div>
-          <p className="font-semibold text-sm text-rose-300">{match.entry.vehicle}</p>
-          <p className="text-slate-500 text-xs">{match.entry.provider} · {match.entry.type}</p>
+          <p className="font-semibold text-sm lg:text-base text-rose-300">{match.entry.vehicle}</p>
+          <p className="text-slate-500 text-xs lg:text-sm">{match.entry.provider} · {match.entry.type}</p>
         </div>
-        <span className="shrink-0 text-xs px-2 py-0.5 rounded border font-semibold bg-rose-900/50 text-rose-300 border-rose-700">
+        <span className="shrink-0 text-xs lg:text-sm px-2 py-0.5 lg:px-2.5 lg:py-1 rounded border font-semibold bg-rose-900/50 text-rose-300 border-rose-700">
           ELIMINATED
         </span>
       </div>
-      <ul className="grid grid-cols-4 gap-1 text-xs text-slate-500 mb-2 list-none p-0">
+      <ul className="grid grid-cols-4 gap-1 text-xs lg:text-sm text-slate-500 mb-2 list-none p-0">
         <li>
           <CheckIcon ok={match.passes_mass} />
           <span className="sr-only">{match.passes_mass ? "Pass" : "Fail"}:</span>
@@ -361,7 +353,7 @@ function EliminatedCard({ match }: { match: MatchedVehicle }) {
         </li>
       </ul>
       {match.elimination_reason && (
-        <p className="text-xs text-rose-400/80 border-t border-rose-900/30 pt-2">
+        <p className="text-xs lg:text-sm text-rose-400/80 border-t border-rose-900/30 pt-2">
           {match.elimination_reason}
         </p>
       )}
@@ -371,7 +363,7 @@ function EliminatedCard({ match }: { match: MatchedVehicle }) {
             href={match.entry.website_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-slate-500 hover:text-slate-400 hover:underline focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
+            className="text-xs lg:text-sm text-slate-500 hover:text-slate-400 hover:underline focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded"
           >
             Provider website ↗
           </a>
@@ -385,14 +377,14 @@ function ExplanationPanel({ data }: { data: ExplainResponse }) {
   return (
     <div className="rounded-xl border border-sky-800/60 bg-slate-800/70 p-5 backdrop-blur space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-slate-100 font-semibold text-base">AI Recommendation</h2>
+        <h2 className="text-slate-100 font-semibold text-base lg:text-lg">AI Recommendation</h2>
         {data.fallback && (
-          <span className="text-xs px-2 py-0.5 rounded border bg-amber-900/40 text-amber-300 border-amber-700">
+          <span className="text-xs lg:text-sm px-2 py-0.5 lg:px-2.5 lg:py-1 rounded border bg-amber-900/40 text-amber-300 border-amber-700">
             TEMPLATE
           </span>
         )}
       </div>
-      <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+      <div className="text-sm lg:text-base text-slate-300 leading-relaxed whitespace-pre-wrap">
         {data.explanation}
       </div>
     </div>
@@ -417,7 +409,7 @@ function WeightSlider({
   const descId = `${id}-desc`;
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-xs">
+      <div className="flex justify-between text-xs lg:text-sm">
         <label htmlFor={id} className="text-slate-300 font-medium">{label}</label>
         <span className="text-slate-400" aria-hidden="true">{value}</span>
       </div>
@@ -433,7 +425,7 @@ function WeightSlider({
         onChange={(e) => onChange(Number(e.target.value))}
         className="w-full accent-sky-500"
       />
-      <p id={descId} className="text-xs text-slate-500">{description}</p>
+      <p id={descId} className="text-xs lg:text-sm text-slate-500">{description}</p>
     </div>
   );
 }
@@ -445,12 +437,12 @@ function WeightSlider({
 function PromptFieldsHint() {
   return (
     <div className="rounded-lg border border-slate-700 bg-slate-800/40 px-4 py-3 space-y-2">
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+      <p className="text-xs lg:text-sm font-semibold text-slate-400 uppercase tracking-wide">
         Fields extracted from your description
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
         {REQUIRED_FIELDS.map((f) => (
-          <div key={f.name} className="flex items-start gap-2 text-xs">
+          <div key={f.name} className="flex items-start gap-2 text-xs lg:text-sm">
             <span className="mt-0.5 shrink-0 w-2 h-2 rounded-full bg-sky-500/70" />
             <div>
               <span className="text-slate-200 font-medium">{f.name}</span>
@@ -519,7 +511,7 @@ function ImproveProgressBar({ step }: { step: number }) {
           return (
             <div key={label} className="flex-1 min-w-0 text-center">
               <span
-                className={`text-[10px] leading-tight block truncate transition-colors
+                className={`text-xs leading-tight block truncate transition-colors
                   ${done   ? "text-emerald-400" : ""}
                   ${active ? "text-sky-300 font-semibold" : ""}
                   ${!done && !active ? "text-slate-600" : ""}
@@ -568,7 +560,7 @@ function ClarifyingQuestionsForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+      <p className="text-xs lg:text-sm font-semibold text-slate-400 uppercase tracking-wide">
         Answer the questions below to complete your description
       </p>
       <div className="space-y-2.5">
@@ -578,7 +570,7 @@ function ClarifyingQuestionsForm({
             <div key={q.field} className="space-y-1">
               <label
                 htmlFor={`clarify-${q.field}`}
-                className="block text-xs text-slate-300 font-medium"
+                className="block text-xs lg:text-sm text-slate-300 font-medium"
               >
                 {fieldMeta?.name ?? q.field}
                 <span className="ml-1 text-slate-500 font-normal">— {q.question}</span>
@@ -590,7 +582,7 @@ function ClarifyingQuestionsForm({
                 value={answers[q.field] ?? ""}
                 onChange={(e) => handleChange(q.field, e.target.value)}
                 placeholder={q.placeholder}
-                className="w-full rounded border border-slate-600 bg-slate-700/60 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full rounded border border-slate-600 bg-slate-700/60 px-3 py-1.5 text-xs lg:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
           );
@@ -599,7 +591,7 @@ function ClarifyingQuestionsForm({
       <button
         type="submit"
         disabled={!anyFilled}
-        className="px-3 py-1.5 rounded bg-sky-700 hover:bg-sky-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-xs text-white font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-sky-400 focus-visible:outline-offset-2"
+        className="px-3 py-1.5 lg:px-4 lg:py-2 rounded bg-sky-700 hover:bg-sky-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-xs lg:text-sm text-white font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-sky-400 focus-visible:outline-offset-2"
       >
         Apply answers to description
       </button>
@@ -707,7 +699,7 @@ function ImprovePanel({
 
       <div id={panelId} hidden={!open}>
         {open && (
-          <div className="rounded-lg border border-slate-700 bg-slate-800/40 px-4 py-3 space-y-4 text-xs">
+          <div className="rounded-lg border border-slate-700 bg-slate-800/40 px-4 py-3 space-y-4 text-xs lg:text-sm">
 
             {/* Progress bar — visible while in-flight or done */}
             {progressStep > 0 && (
@@ -766,7 +758,7 @@ function ImprovePanel({
                     </p>
                     <button
                       onClick={() => onUseRewrite(result.suggested_rewrite!)}
-                      className="px-3 py-1.5 rounded bg-sky-700 hover:bg-sky-600 text-white font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-sky-400 focus-visible:outline-offset-2"
+                      className="px-3 py-1.5 lg:px-4 lg:py-2 rounded bg-sky-700 hover:bg-sky-600 text-xs lg:text-sm text-white font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-sky-400 focus-visible:outline-offset-2"
                     >
                       Use this
                     </button>
@@ -796,6 +788,15 @@ function ImprovePanel({
 const PLACEHOLDER = `Example: "We have a 45 kg Earth observation satellite targeting a 550 km SSO orbit. Our total launch budget is $2.5M and we need to launch within 12 months."`;
 
 const DEFAULT_WEIGHTS: PriorityWeights = { cost: 3, schedule: 3, orbit_precision: 3 };
+
+function GearIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+    </svg>
+  );
+}
 
 export default function Home() {
   const { settings, resolvedTheme } = useUISettings();
@@ -931,30 +932,35 @@ export default function Home() {
       </a>
       {resolvedTheme === "dark" && <Stars />}
 
-      <SettingsPanel open={settingsPanelOpen} onClose={() => setSettingsPanelOpen(false)} />
+      {/* Slide-in settings drawer — mobile/tablet only (hidden on xl+) */}
+      <div className="xl:hidden">
+        <SettingsPanel open={settingsPanelOpen} onClose={() => setSettingsPanelOpen(false)} />
+      </div>
 
-      <main id="main-content" className="relative z-10 max-w-3xl mx-auto px-4 py-12 space-y-10">
+      {/* Page layout: centered main content + right settings sidebar */}
+      <div className="relative z-10 flex justify-center px-4 py-12 gap-8">
+        <main id="main-content" className="w-full max-w-3xl min-w-0 space-y-10">
         {/* Header */}
         <header className="space-y-2">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2 flex-1">
-              <p className="text-xs font-semibold tracking-widest text-sky-400 uppercase" aria-hidden="true">
-                IBM Builders Challenge · Mission Planning
-              </p>
-              <h1 className={`text-3xl font-bold tracking-tight ${resolvedTheme === "light" ? "text-slate-900" : "text-slate-50"}`}>
-                Satellite Launch Vehicle / Rideshare Configurator
-              </h1>
-              <p className={`text-sm leading-relaxed max-w-lg ${resolvedTheme === "light" ? "text-slate-600" : "text-slate-400"}`}>
+            <p className="text-xs lg:text-sm font-semibold tracking-widest text-sky-400 uppercase" aria-hidden="true">
+              IBM Builders Challenge · Mission Planning
+            </p>
+            <h1 className={`text-3xl lg:text-4xl font-bold tracking-tight ${resolvedTheme === "light" ? "text-slate-900" : "text-slate-50"}`}>
+              Satellite Launch Vehicle / Rideshare Configurator
+            </h1>
+              <p className={`text-sm lg:text-base leading-relaxed max-w-lg ${resolvedTheme === "light" ? "text-slate-600" : "text-slate-400"}`}>
                 Describe your mission in plain English. The AI pipeline will parse your requirements,
                 filter the launch catalog, rank options by your priorities, and explain the trade-offs.
               </p>
             </div>
-            {/* Settings gear button */}
+            {/* Settings button — visible on mobile/tablet only, hidden when sidebar is shown */}
             <button
               onClick={() => setSettingsPanelOpen(true)}
-              aria-label="Open UI settings"
-              title="UI Settings"
-              className={`shrink-0 mt-1 p-2 rounded-lg border transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2
+              aria-label="Open Settings"
+              title="Settings"
+              className={`xl:hidden shrink-0 mt-1 p-2 rounded-lg border transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2
                 ${resolvedTheme === "light"
                   ? "border-slate-300 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                   : "border-slate-700 bg-slate-800/60 text-slate-400 hover:bg-slate-700 hover:text-slate-100"
@@ -967,13 +973,13 @@ export default function Home() {
 
         {/* Input */}
         <section className="space-y-3">
-          <label htmlFor="mission-desc" className="block text-sm font-medium text-slate-300">
+          <label htmlFor="mission-desc" className="block text-sm lg:text-base font-medium text-slate-300">
             Mission Description
           </label>
           <textarea
             id="mission-desc"
             rows={5}
-            className="w-full rounded-lg border border-slate-700 bg-slate-800/80 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none backdrop-blur"
+            className="w-full rounded-lg border border-slate-700 bg-slate-800/80 px-4 py-3 text-sm lg:text-base text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none backdrop-blur"
             placeholder={PLACEHOLDER}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -990,7 +996,7 @@ export default function Home() {
 
           {/* Priority weight sliders */}
           <fieldset className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 space-y-4">
-            <legend className="text-xs font-semibold text-slate-300 uppercase tracking-wide px-1">
+            <legend className="text-xs lg:text-sm font-semibold text-slate-300 uppercase tracking-wide px-1">
               Mission Priorities
             </legend>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1021,7 +1027,7 @@ export default function Home() {
           <button
             onClick={handleAnalyze}
             disabled={loading || !description.trim()}
-            className="px-5 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-sm font-semibold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400"
+            className="px-5 py-2.5 lg:px-6 lg:py-3 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-sm lg:text-base font-semibold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400"
           >
             {loading ? loadingStep || "Analyzing…" : "Analyze Mission"}
           </button>
@@ -1051,7 +1057,7 @@ export default function Home() {
         {mission && (
           <section aria-label="Analysis Results" className="space-y-6">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              <h2 className="text-xs lg:text-sm font-semibold text-slate-400 uppercase tracking-wide">
                 Analysis Results
               </h2>
               <DownloadMenu
@@ -1074,8 +1080,8 @@ export default function Home() {
             {ranked && ranked.length > 0 && (
               <section aria-label="Ranked Launch Options" className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-slate-100 font-semibold text-base">Ranked Launch Options</h3>
-                  <span className="text-xs text-emerald-400 font-medium" aria-label={`${ranked.length} viable options`}>
+                  <h3 className="text-slate-100 font-semibold text-base lg:text-lg">Ranked Launch Options</h3>
+                  <span className="text-xs lg:text-sm text-emerald-400 font-medium" aria-label={`${ranked.length} viable options`}>
                     {ranked.length} viable
                   </span>
                 </div>
@@ -1087,7 +1093,7 @@ export default function Home() {
 
             {/* No viable options */}
             {ranked && ranked.length === 0 && (
-              <div role="status" className="rounded-xl border border-amber-700/60 bg-amber-900/20 px-5 py-4 text-sm text-amber-300">
+              <div role="status" className="rounded-xl border border-amber-700/60 bg-amber-900/20 px-5 py-4 text-sm lg:text-base text-amber-300">
                 No vehicles passed all constraints. Consider relaxing your budget, schedule, or orbit requirements.
               </div>
             )}
@@ -1095,7 +1101,7 @@ export default function Home() {
             {/* Eliminated vehicles (collapsible) */}
             {eliminated && eliminated.length > 0 && (
               <details className="group">
-                <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-300 transition-colors list-none focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded">
+                <summary className="cursor-pointer text-xs lg:text-sm text-slate-500 hover:text-slate-300 transition-colors list-none focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded">
                   <span aria-hidden="true">▶ </span>Show {eliminated.length} eliminated option{eliminated.length !== 1 ? "s" : ""}
                 </summary>
                 <div className="mt-3 space-y-3">
@@ -1107,7 +1113,13 @@ export default function Home() {
             )}
           </section>
         )}
-      </main>
+        </main>
+
+        {/* Right-hand settings sidebar */}
+        <div className="hidden xl:block">
+          <SettingsSidebar />
+        </div>
+      </div>
     </div>
   );
 }

@@ -109,7 +109,7 @@ export default function DownloadMenu({ payload }: DownloadMenuProps) {
           {FORMAT_GROUPS.map((group) => (
             <div key={group.label} role="group" aria-label={group.label}>
               <p
-                className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500"
+                className="px-3 pt-3 pb-1 text-[10px] lg:text-xs font-semibold uppercase tracking-widest text-slate-500"
                 aria-hidden="true"
               >
                 {group.label}
@@ -132,7 +132,7 @@ export default function DownloadMenu({ payload }: DownloadMenuProps) {
                     </span>
                     <span className="text-slate-200">{fmt.label}</span>
                   </span>
-                  <span className="text-slate-500 text-xs" aria-hidden="true">{fmt.description}</span>
+                  <span className="text-slate-500 text-xs lg:text-sm" aria-hidden="true">{fmt.description}</span>
                 </button>
               ))}
             </div>
