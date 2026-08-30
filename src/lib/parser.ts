@@ -3,33 +3,94 @@ import type { ParsedMission } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Zod schema for LLM JSON output
+//
+// Each field is validated independently (see `resolveField` in the main export)
+// so that one malformed value — an out-of-vocabulary orbit label, a number
+// left as a unit-suffixed string, an unexpected enum casing — degrades only
+// that field instead of discarding the whole response. `coerceNumericField`
+// and the orbit/inclination normalizers below are the "accept unhandled
+// formats" layer: they absorb the shapes Gemini most commonly emits for
+// terms/units outside the strict schema before falling back per-field.
 // ---------------------------------------------------------------------------
-const ParsedMissionSchema = z.object({
-  payload_mass_kg: z.number().nullable(),
-  orbit_type: z
-    .enum(["LEO", "SSO", "MEO", "GTO", "GEO", "HEO", "any"])
-    .nullable(),
-  target_altitude_km: z.number().nullable(),
-  budget_usd: z.number().nullable(),
-  schedule_months: z.number().nullable(),
-  inclination_flexibility_required: z
-    .enum(["fixed", "limited", "customer-defined", "any"])
-    .nullable(),
-  parse_confidence: z.enum(["high", "medium", "low"]),
-});
+const ORBIT_ENUM_VALUES = ["LEO", "SSO", "MEO", "GTO", "GEO", "HEO", "any"] as const;
+const INCLINATION_ENUM_VALUES = [
+  "fixed",
+  "limited",
+  "customer-defined",
+  "any",
+] as const;
+
+/**
+ * Coerce a numeric field that may have arrived as a plain number, a
+ * comma-grouped or unit-suffixed string ("5,000", "5000 kg", "$5,000,000"),
+ * or something unusable. Returns `undefined` (schema-invalid, triggers
+ * per-field heuristic fallback) rather than throwing, so a single odd value
+ * never takes down the rest of the response.
+ */
+function coerceNumericField(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value === "string") {
+    const cleaned = value.replace(/,/g, "").trim();
+    if (/^-?\d+(?:\.\d+)?$/.test(cleaned)) return parseFloat(cleaned);
+    const embedded = cleaned.match(/-?\d+(?:\.\d+)?/);
+    if (embedded) return parseFloat(embedded[0]);
+  }
+  return undefined;
+}
+
+/**
+ * Normalize an orbit_type value. Exact enum matches (any casing) pass
+ * straight through; a descriptive phrase ("sun-synchronous", "geostationary
+ * transfer orbit") is resolved via the same heuristic used by the offline
+ * parser. Anything unrecognized returns `undefined` so the field falls back
+ * to the heuristic pass over the raw text, rather than silently becoming null.
+ */
+function normalizeOrbitField(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  const upper = trimmed.toUpperCase();
+  if (upper === "ANY") return "any";
+  if ((ORBIT_ENUM_VALUES as readonly string[]).includes(upper)) return upper;
+  return parseOrbit(trimmed) ?? undefined;
+}
+
+/** Same idea as `normalizeOrbitField`, for inclination_flexibility_required. */
+function normalizeInclinationField(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== "string") return undefined;
+  const lower = value.trim().toLowerCase();
+  if ((INCLINATION_ENUM_VALUES as readonly string[]).includes(lower)) return lower;
+  return parseInclination(value) ?? undefined;
+}
+
+const NumberFieldSchema = z.preprocess(coerceNumericField, z.number().finite().nullable());
+const OrbitFieldSchema = z.preprocess(normalizeOrbitField, z.enum(ORBIT_ENUM_VALUES).nullable());
+const InclinationFieldSchema = z.preprocess(
+  normalizeInclinationField,
+  z.enum(INCLINATION_ENUM_VALUES).nullable()
+);
+const ConfidenceFieldSchema = z.enum(["high", "medium", "low"]);
 
 const SYSTEM_PROMPT = `You are a mission-requirements parser for a launch vehicle selection tool.
 Extract the following fields from the user's mission description and return ONLY valid JSON — no markdown, no explanation.
-Infer field values from natural language — do not require exact keywords.
+Infer field values from natural language — do not require exact keywords. The description may use units,
+formats, or terminology outside the examples below (nautical miles, feet, grams, stone, quarters/fiscal dates,
+foreign currency, informal orbit names like "polar" or "molniya"); use your best judgment to convert or classify
+these rather than leaving a field null. Only use null when no reasonable inference is possible.
 
 Fields to extract:
-- payload_mass_kg: numeric kg of the payload (null if not specified; convert lbs or tonnes to kg if needed)
-- orbit_type: one of "LEO", "SSO", "MEO", "GTO", "GEO", "HEO", "any" (null if unclear; infer from context, e.g. "low earth orbit" → "LEO", "800km MEO orbit" → "MEO")
-- target_altitude_km: numeric km if an altitude is mentioned (null otherwise; convert miles to km if needed)
-- budget_usd: maximum budget in USD as a number (null if not specified; convert M/million/billion to full number; "$15 million" → 15000000)
-- schedule_months: maximum acceptable months from contract to launch (null if not specified; convert years to months: "2 years" → 24, "within a year" → 12)
+- payload_mass_kg: numeric kg of the payload (null if not specified; convert any mass unit to kg — lbs, tonnes/metric tons, grams, stone, etc.)
+- orbit_type: one of "LEO", "SSO", "MEO", "GTO", "GEO", "HEO", "any" (null if unclear; infer from context, e.g. "low earth orbit" → "LEO", "800km MEO orbit" → "MEO", "molniya"/"highly elliptical" → "HEO", generic "polar orbit" with no other cue → "LEO")
+- target_altitude_km: numeric km if an altitude is mentioned (null otherwise; convert any distance unit to km — miles, nautical miles, feet, etc.)
+- budget_usd: maximum budget in USD as a number (null if not specified; convert M/million/billion/k/thousand to full number, and convert non-USD currency to an approximate USD figure if that's all that's given; "$15 million" → 15000000)
+- schedule_months: maximum acceptable months from contract to launch (null if not specified; convert any duration unit to months: years, quarters, weeks, or relative phrases like "by next spring")
 - inclination_flexibility_required: one of "fixed", "limited", "customer-defined", "any" (null if unspecified; "flexible" → "any", "inclination control is flexible" → "any", "specific inclination" → "customer-defined")
-- parse_confidence: "high" if most fields are clearly stated, "medium" if some inference was required, "low" if very little concrete data
+- parse_confidence: "high" if most fields are clearly stated, "medium" if some inference or unit conversion was required, "low" if very little concrete data
+
+Always return each field as its stated type (a number or the exact enum string) — never a string wrapping a number, and never an
+enum value outside the list given, even if that means returning null for a term you cannot confidently classify.
 
 Return exactly this JSON structure:
 {
@@ -45,9 +106,10 @@ Return exactly this JSON structure:
 // ---------------------------------------------------------------------------
 // Regex / heuristic fallback (no API key)
 //
-// This is a safety net, not the primary parser: it only runs when the LLM above
-// is unavailable or returns something unusable. It covers the common phrasings
-// and unit conversions; genuinely freeform input is the model's job.
+// This is a safety net, not the primary parser: it runs whenever the LLM above
+// is unavailable, or (per-field) whenever the model's value for one field
+// doesn't validate. It covers the common phrasings and unit conversions;
+// genuinely freeform input is the model's job.
 // ---------------------------------------------------------------------------
 const WORD_NUM: Record<string, number> = {
   a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
@@ -202,7 +264,7 @@ function parseInclination(
   return null;
 }
 
-function heuristicParse(text: string): ParsedMission {
+export function heuristicParse(text: string): ParsedMission {
   const payload_mass_kg = parseMass(text);
   const orbit_type = parseOrbit(text);
   const target_altitude_km = parseAltitude(text);
@@ -224,6 +286,36 @@ function heuristicParse(text: string): ParsedMission {
     raw_input: text,
     parse_confidence: found >= 3 ? "medium" : "low",
   };
+}
+
+/**
+ * Gemini occasionally wraps its JSON in a markdown code fence despite the
+ * system prompt telling it not to. Strip that before parsing so a stray
+ * ```json fence doesn't take down an otherwise-good response.
+ */
+function stripMarkdownFence(raw: string): string {
+  const trimmed = raw.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return fenced ? fenced[1] : trimmed;
+}
+
+/**
+ * Validate one field of the model's JSON against its schema. On success,
+ * the (possibly normalized/coerced) model value is used. On failure — an
+ * unrecognized orbit label, a non-numeric string, a hallucinated enum value —
+ * the corresponding heuristic-parsed value from the raw text is used instead
+ * and `degraded` is incremented so overall confidence can be adjusted.
+ */
+function resolveField<T>(
+  schema: z.ZodType<T>,
+  modelValue: unknown,
+  heuristicValue: T,
+  degraded: { count: number }
+): T {
+  const result = schema.safeParse(modelValue);
+  if (result.success) return result.data;
+  degraded.count += 1;
+  return heuristicValue;
 }
 
 // ---------------------------------------------------------------------------
@@ -255,11 +347,77 @@ export async function parseMissionDescription(
     });
 
     const raw = response.text ?? "";
-    const parsed = ParsedMissionSchema.parse(JSON.parse(raw));
+    const modelData = JSON.parse(stripMarkdownFence(raw)) as Record<string, unknown>;
+    if (typeof modelData !== "object" || modelData === null || Array.isArray(modelData)) {
+      throw new Error("Gemini response was not a JSON object");
+    }
 
-    return { ...parsed, raw_input: text };
+    // Computed once, used only for whichever individual fields the model's
+    // response doesn't hold up under validation — this is the layer that
+    // lets terms/formats/units the model mishandles still get accepted.
+    const heuristic = heuristicParse(text);
+    const degraded = { count: 0 };
+
+    const payload_mass_kg = resolveField(
+      NumberFieldSchema,
+      modelData.payload_mass_kg,
+      heuristic.payload_mass_kg,
+      degraded
+    );
+    const orbit_type = resolveField(
+      OrbitFieldSchema,
+      modelData.orbit_type,
+      heuristic.orbit_type,
+      degraded
+    ) as ParsedMission["orbit_type"];
+    const target_altitude_km = resolveField(
+      NumberFieldSchema,
+      modelData.target_altitude_km,
+      heuristic.target_altitude_km,
+      degraded
+    );
+    const budget_usd = resolveField(
+      NumberFieldSchema,
+      modelData.budget_usd,
+      heuristic.budget_usd,
+      degraded
+    );
+    const schedule_months = resolveField(
+      NumberFieldSchema,
+      modelData.schedule_months,
+      heuristic.schedule_months,
+      degraded
+    );
+    const inclination_flexibility_required = resolveField(
+      InclinationFieldSchema,
+      modelData.inclination_flexibility_required,
+      heuristic.inclination_flexibility_required,
+      degraded
+    ) as ParsedMission["inclination_flexibility_required"];
+
+    const confidenceResult = ConfidenceFieldSchema.safeParse(modelData.parse_confidence);
+    let parse_confidence: ParsedMission["parse_confidence"] = confidenceResult.success
+      ? confidenceResult.data
+      : "low";
+    if (degraded.count >= 2) {
+      parse_confidence = "low";
+    } else if (degraded.count === 1) {
+      parse_confidence = parse_confidence === "high" ? "medium" : "low";
+    }
+
+    return {
+      payload_mass_kg,
+      orbit_type,
+      target_altitude_km,
+      budget_usd,
+      schedule_months,
+      inclination_flexibility_required,
+      raw_input: text,
+      parse_confidence,
+    };
   } catch {
-    // Any error (network, parse, validation) → fall back to heuristic
+    // Total failure (network, non-JSON body, malformed structure) → fall back
+    // entirely to the heuristic pass.
     const fallback = heuristicParse(text);
     return { ...fallback, parse_confidence: "low" };
   }

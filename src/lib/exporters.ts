@@ -20,6 +20,7 @@ function fmtNull(v: string | number | null | undefined): string {
 }
 
 export interface ExportPayload {
+  userPrompt?: string;
   mission: ParsedMission;
   ranked: RankedVehicle[];
   eliminated: MatchedVehicle[];
@@ -28,7 +29,7 @@ export interface ExportPayload {
 }
 
 function buildTextLines(payload: ExportPayload): string[] {
-  const { mission, ranked, eliminated, explanation, generatedAt } = payload;
+  const { userPrompt, mission, ranked, eliminated, explanation, generatedAt } = payload;
   const ts = generatedAt ?? new Date().toISOString();
   const lines: string[] = [];
 
@@ -37,6 +38,15 @@ function buildTextLines(payload: ExportPayload): string[] {
   lines.push(`Generated: ${ts}`);
   lines.push("=".repeat(60));
   lines.push("");
+
+  // User prompt
+  const prompt = userPrompt ?? mission.raw_input;
+  if (prompt) {
+    lines.push("USER PROMPT");
+    lines.push("-".repeat(40));
+    lines.push(prompt);
+    lines.push("");
+  }
 
   // Mission requirements
   lines.push("MISSION REQUIREMENTS");
@@ -67,11 +77,19 @@ function buildTextLines(payload: ExportPayload): string[] {
     ranked.forEach((m) => {
       lines.push(`#${m.rank}  ${m.entry.vehicle} (${m.entry.provider})`);
       lines.push(`    Type:          ${m.entry.type}`);
+      lines.push(`    Status:        ${m.entry.status}`);
       lines.push(`    Score:         ${m.score}/100`);
       lines.push(`    Est. Cost:     ${fmtUsd(m.estimated_cost_usd)}`);
       lines.push(`    Lead Time:     ${m.entry.integration.lead_time_months.min}–${m.entry.integration.lead_time_months.max} months`);
+      lines.push(`    Orbit Types:   ${m.entry.orbit_options.supported_orbit_types.join(", ")}`);
       lines.push(`    Orbit Flex:    ${m.entry.orbit_options.inclination_flexibility}`);
       lines.push(`    Score Detail:  Cost ${m.score_breakdown.cost_score} | Schedule ${m.score_breakdown.schedule_score} | Orbit ${m.score_breakdown.orbit_score}`);
+      if (m.entry.notes) {
+        lines.push(`    Notes:         ${m.entry.notes}`);
+      }
+      if (m.entry.website_url) {
+        lines.push(`    Website:       ${m.entry.website_url}`);
+      }
       lines.push("");
     });
   }
@@ -83,6 +101,7 @@ function buildTextLines(payload: ExportPayload): string[] {
     eliminated.forEach((m) => {
       lines.push(`  ${m.entry.vehicle} (${m.entry.provider})`);
       if (m.elimination_reason) lines.push(`    Reason: ${m.elimination_reason}`);
+      if (m.entry.website_url) lines.push(`    Website: ${m.entry.website_url}`);
     });
     lines.push("");
   }
@@ -93,13 +112,22 @@ function buildTextLines(payload: ExportPayload): string[] {
 }
 
 function buildMarkdown(payload: ExportPayload): string {
-  const { mission, ranked, eliminated, explanation, generatedAt } = payload;
+  const { userPrompt, mission, ranked, eliminated, explanation, generatedAt } = payload;
   const ts = generatedAt ?? new Date().toISOString();
   const md: string[] = [];
 
   md.push("# Satellite Launch Vehicle — Mission Report");
   md.push(`*Generated: ${ts}*`);
   md.push("");
+
+  // User prompt
+  const prompt = userPrompt ?? mission.raw_input;
+  if (prompt) {
+    md.push("## User Prompt");
+    md.push("");
+    md.push(`> ${prompt.replace(/\n/g, "\n> ")}`);
+    md.push("");
+  }
 
   md.push("## Mission Requirements");
   md.push("");
@@ -126,21 +154,36 @@ function buildMarkdown(payload: ExportPayload): string {
   if (ranked.length === 0) {
     md.push("> No vehicles passed all constraints.");
   } else {
-    md.push("| Rank | Vehicle | Provider | Score | Est. Cost | Lead Time | Orbit Flex |");
-    md.push("|---|---|---|---|---|---|---|");
     ranked.forEach((m) => {
-      md.push(
-        `| #${m.rank} | ${m.entry.vehicle} | ${m.entry.provider} | ${m.score} | ${fmtUsd(m.estimated_cost_usd)} | ${m.entry.integration.lead_time_months.min}–${m.entry.integration.lead_time_months.max} mo | ${m.entry.orbit_options.inclination_flexibility} |`
-      );
+      const websiteLink = m.entry.website_url ? ` — [Provider website](${m.entry.website_url})` : "";
+      md.push(`### #${m.rank} — ${m.entry.vehicle} (${m.entry.provider})${websiteLink}`);
+      md.push("");
+      md.push("| Field | Value |");
+      md.push("|---|---|");
+      md.push(`| Type | ${m.entry.type} |`);
+      md.push(`| Status | ${m.entry.status} |`);
+      md.push(`| Score | **${m.score}/100** |`);
+      md.push(`| Est. Cost | ${fmtUsd(m.estimated_cost_usd)} |`);
+      md.push(`| Lead Time | ${m.entry.integration.lead_time_months.min}–${m.entry.integration.lead_time_months.max} months |`);
+      md.push(`| Orbit Types | ${m.entry.orbit_options.supported_orbit_types.join(", ")} |`);
+      md.push(`| Orbit Flexibility | ${m.entry.orbit_options.inclination_flexibility} |`);
+      md.push(`| Cost Score | ${m.score_breakdown.cost_score}/100 |`);
+      md.push(`| Schedule Score | ${m.score_breakdown.schedule_score}/100 |`);
+      md.push(`| Orbit Score | ${m.score_breakdown.orbit_score}/100 |`);
+      md.push("");
+      if (m.entry.notes) {
+        md.push(`*${m.entry.notes}*`);
+        md.push("");
+      }
     });
   }
-  md.push("");
 
   if (eliminated.length > 0) {
     md.push(`## Eliminated Options (${eliminated.length})`);
     md.push("");
     eliminated.forEach((m) => {
-      md.push(`- **${m.entry.vehicle}** (${m.entry.provider})${m.elimination_reason ? ` — ${m.elimination_reason}` : ""}`);
+      const websiteLink = m.entry.website_url ? ` — [website](${m.entry.website_url})` : "";
+      md.push(`- **${m.entry.vehicle}** (${m.entry.provider})${websiteLink}${m.elimination_reason ? ` — ${m.elimination_reason}` : ""}`);
     });
     md.push("");
   }
@@ -277,12 +320,22 @@ export async function downloadPdf(payload: ExportPayload): Promise<void> {
   };
 
   const ts = payload.generatedAt ?? new Date().toISOString();
-  const { mission, ranked, eliminated, explanation } = payload;
+  const { userPrompt, mission, ranked, eliminated, explanation } = payload;
 
   line("Satellite Launch Vehicle — Mission Report", 16, "bold", "#0284c7");
   line(`Generated: ${ts}`, 8, "normal", "#64748b");
   gap();
   rule();
+
+  // User prompt
+  const prompt = userPrompt ?? mission.raw_input;
+  if (prompt) {
+    line("USER PROMPT", 11, "bold");
+    gap(2);
+    line(prompt, 9, "normal", "#334155");
+    gap();
+    rule();
+  }
 
   line("MISSION REQUIREMENTS", 11, "bold");
   gap(2);
@@ -323,9 +376,26 @@ export async function downloadPdf(payload: ExportPayload): Promise<void> {
   } else {
     ranked.forEach((m) => {
       line(`#${m.rank}  ${m.entry.vehicle}  —  ${m.entry.provider}`, 10, "bold", "#0369a1");
-      line(`Score: ${m.score}/100  |  Est. Cost: ${fmtUsd(m.estimated_cost_usd)}  |  Lead Time: ${m.entry.integration.lead_time_months.min}–${m.entry.integration.lead_time_months.max} mo  |  Orbit Flex: ${m.entry.orbit_options.inclination_flexibility}`, 8, "normal", "#334155");
-      line(`Score Detail — Cost: ${m.score_breakdown.cost_score}  Schedule: ${m.score_breakdown.schedule_score}  Orbit: ${m.score_breakdown.orbit_score}`, 8, "normal", "#64748b");
-      gap(2);
+      line(`Type: ${m.entry.type}  |  Status: ${m.entry.status}`, 8, "normal", "#64748b");
+      line(`Score: ${m.score}/100  |  Est. Cost: ${fmtUsd(m.estimated_cost_usd)}  |  Lead Time: ${m.entry.integration.lead_time_months.min}–${m.entry.integration.lead_time_months.max} mo`, 8, "normal", "#334155");
+      line(`Orbit Types: ${m.entry.orbit_options.supported_orbit_types.join(", ")}  |  Orbit Flex: ${m.entry.orbit_options.inclination_flexibility}`, 8, "normal", "#334155");
+      line(`Score Breakdown — Cost: ${m.score_breakdown.cost_score}  |  Schedule: ${m.score_breakdown.schedule_score}  |  Orbit: ${m.score_breakdown.orbit_score}`, 8, "normal", "#64748b");
+      if (m.entry.notes) {
+        line(m.entry.notes, 8, "normal", "#475569");
+      }
+      if (m.entry.website_url) {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor("#0369a1");
+        const wrapped = doc.splitTextToSize(`Website: ${m.entry.website_url}`, contentW);
+        if (y + wrapped.length * (8 * 0.4) > doc.internal.pageSize.getHeight() - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.textWithLink(`Website: ${m.entry.website_url}`, margin, y, { url: m.entry.website_url });
+        y += wrapped.length * (8 * 0.4) + 1;
+      }
+      gap(3);
     });
   }
 
@@ -336,6 +406,13 @@ export async function downloadPdf(payload: ExportPayload): Promise<void> {
     eliminated.forEach((m) => {
       line(`${m.entry.vehicle} (${m.entry.provider})`, 9, "bold", "#b91c1c");
       if (m.elimination_reason) line(m.elimination_reason, 8, "normal", "#64748b");
+      if (m.entry.website_url) {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor("#0369a1");
+        doc.textWithLink(`Website: ${m.entry.website_url}`, margin, y, { url: m.entry.website_url });
+        y += 8 * 0.4 + 1;
+      }
       gap(2);
     });
   }
@@ -348,17 +425,19 @@ export async function downloadPdf(payload: ExportPayload): Promise<void> {
 
 export async function downloadDocx(payload: ExportPayload): Promise<void> {
   const {
-    Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType,
+    Document, Packer, Paragraph, TextRun, HeadingLevel,
+    BorderStyle, AlignmentType,
   } = await import("docx");
 
   const ts = payload.generatedAt ?? new Date().toISOString();
-  const { mission, ranked, eliminated, explanation } = payload;
+  const { userPrompt, mission, ranked, eliminated, explanation } = payload;
 
   const h1 = (text: string) =>
     new Paragraph({ text, heading: HeadingLevel.HEADING_1, spacing: { after: 120 } });
   const h2 = (text: string) =>
     new Paragraph({ text, heading: HeadingLevel.HEADING_2, spacing: { before: 240, after: 120 } });
+  const h3 = (text: string) =>
+    new Paragraph({ text, heading: HeadingLevel.HEADING_3, spacing: { before: 160, after: 80 } });
   const body = (text: string) =>
     new Paragraph({ children: [new TextRun({ text, size: 20 })], spacing: { after: 80 } });
   const kv = (key: string, val: string) =>
@@ -373,50 +452,31 @@ export async function downloadDocx(payload: ExportPayload): Promise<void> {
   const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   const cellBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
 
-  const tableHeaderRow = new TableRow({
-    children: ["Rank", "Vehicle", "Provider", "Score", "Est. Cost", "Lead Time", "Orbit Flex"].map(
-      (h) =>
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: h, bold: true, size: 18 })] })],
-          borders: cellBorders,
-        })
-    ),
-  });
-
-  const rankedRows = ranked.map(
-    (m) =>
-      new TableRow({
-        children: [
-          `#${m.rank}`,
-          m.entry.vehicle,
-          m.entry.provider,
-          String(m.score),
-          fmtUsd(m.estimated_cost_usd),
-          `${m.entry.integration.lead_time_months.min}–${m.entry.integration.lead_time_months.max} mo`,
-          m.entry.orbit_options.inclination_flexibility,
-        ].map(
-          (val) =>
-            new TableCell({
-              children: [new Paragraph({ children: [new TextRun({ text: val, size: 18 })] })],
-              borders: cellBorders,
-            })
-        ),
-      })
-  );
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sections: any[] = [
     h1("Satellite Launch Vehicle — Mission Report"),
     body(`Generated: ${ts}`),
-    h2("Mission Requirements"),
-    kv("Payload Mass", mission.payload_mass_kg != null ? `${mission.payload_mass_kg} kg` : "—"),
-    kv("Orbit Type", fmtNull(mission.orbit_type)),
-    kv("Target Altitude", mission.target_altitude_km != null ? `${mission.target_altitude_km} km` : "—"),
-    kv("Budget Ceiling", fmtUsd(mission.budget_usd)),
-    kv("Max Lead Time", mission.schedule_months != null ? `${mission.schedule_months} months` : "—"),
-    kv("Inclination Flexibility", fmtNull(mission.inclination_flexibility_required)),
-    kv("Parse Confidence", mission.parse_confidence.toUpperCase()),
   ];
+
+  // User prompt
+  const prompt = userPrompt ?? mission.raw_input;
+  if (prompt) {
+    sections.push(h2("User Prompt"));
+    sections.push(body(prompt));
+  }
+
+  sections.push(
+    ...[
+      h2("Mission Requirements"),
+      kv("Payload Mass", mission.payload_mass_kg != null ? `${mission.payload_mass_kg} kg` : "—"),
+      kv("Orbit Type", fmtNull(mission.orbit_type)),
+      kv("Target Altitude", mission.target_altitude_km != null ? `${mission.target_altitude_km} km` : "—"),
+      kv("Budget Ceiling", fmtUsd(mission.budget_usd)),
+      kv("Max Lead Time", mission.schedule_months != null ? `${mission.schedule_months} months` : "—"),
+      kv("Inclination Flexibility", fmtNull(mission.inclination_flexibility_required)),
+      kv("Parse Confidence", mission.parse_confidence.toUpperCase()),
+    ]
+  );
 
   if (explanation) {
     sections.push(h2("AI Recommendation"));
@@ -428,12 +488,41 @@ export async function downloadDocx(payload: ExportPayload): Promise<void> {
   if (ranked.length === 0) {
     sections.push(body("No vehicles passed all constraints."));
   } else {
-    sections.push(
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [tableHeaderRow, ...rankedRows],
-      })
-    );
+    ranked.forEach((m) => {
+      sections.push(h3(`#${m.rank} — ${m.entry.vehicle} (${m.entry.provider})`));
+      sections.push(kv("Type", m.entry.type));
+      sections.push(kv("Status", m.entry.status));
+      sections.push(kv("Score", `${m.score}/100`));
+      sections.push(kv("Est. Cost", fmtUsd(m.estimated_cost_usd)));
+      sections.push(kv("Lead Time", `${m.entry.integration.lead_time_months.min}–${m.entry.integration.lead_time_months.max} months`));
+      sections.push(kv("Orbit Types", m.entry.orbit_options.supported_orbit_types.join(", ")));
+      sections.push(kv("Orbit Flexibility", m.entry.orbit_options.inclination_flexibility));
+      sections.push(kv("Cost Score", `${m.score_breakdown.cost_score}/100`));
+      sections.push(kv("Schedule Score", `${m.score_breakdown.schedule_score}/100`));
+      sections.push(kv("Orbit Score", `${m.score_breakdown.orbit_score}/100`));
+      if (m.entry.notes) {
+        sections.push(
+          new Paragraph({
+            spacing: { after: 60 },
+            children: [
+              new TextRun({ text: "Notes: ", bold: true, size: 20 }),
+              new TextRun({ text: m.entry.notes, size: 20, italics: true }),
+            ],
+          })
+        );
+      }
+      if (m.entry.website_url) {
+        sections.push(
+          new Paragraph({
+            spacing: { after: 60 },
+            children: [
+              new TextRun({ text: "Website: ", bold: true, size: 20 }),
+              new TextRun({ text: m.entry.website_url, size: 20, color: "0369A1" }),
+            ],
+          })
+        );
+      }
+    });
   }
 
   if (eliminated.length > 0) {
@@ -450,6 +539,17 @@ export async function downloadDocx(payload: ExportPayload): Promise<void> {
           ],
         })
       );
+      if (m.entry.website_url) {
+        sections.push(
+          new Paragraph({
+            spacing: { after: 40 },
+            children: [
+              new TextRun({ text: "Website: ", bold: true, size: 18 }),
+              new TextRun({ text: m.entry.website_url, size: 18, color: "0369A1" }),
+            ],
+          })
+        );
+      }
     });
   }
 

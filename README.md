@@ -60,6 +60,7 @@ IBM Bob (the AI coding assistant embedded in the development environment) was us
 ## Features
 
 - **Natural-language parsing** — extracts six structured fields from a plain-English description: payload mass, orbit type, target altitude, budget ceiling, max lead time, and inclination flexibility.
+- **Document upload** — upload a `.txt`, `.md`, `.pdf`, or `.docx` mission brief; text is extracted server-side (via `pdf-parse` / `mammoth`) and populated into the description textarea for review before analysis. Files up to 10 MB; extracted text capped at 50 000 characters. Drag-and-drop supported. Sample files for trying this out are in [`prompt_upload_files/`](prompt_upload_files) — see [Testing document upload](#testing-document-upload).
 - **Catalog filter + ranker** — eliminates vehicles that can't meet hard constraints (mass, orbit, budget, schedule), then scores the remaining options against user-weighted priorities (cost / schedule / orbit precision).
 - **AI explanation** — plain-language trade-off rationale for the top results.
 - **Improve my description** — identifies missing fields and returns a rewritten draft with bracketed prompts for gaps; a "Use this" button replaces the textarea content — never auto-submitted. A structured **clarifying-questions form** lets users fill in individual fields that are merged into the description.
@@ -98,6 +99,19 @@ GEMINI_API_KEY=your_key_here
 
 Without `GEMINI_API_KEY` the app still works fully — see [AI approach](#ai-approach-and-architecture) for fallback behaviour.
 
+### Testing document upload
+
+[`prompt_upload_files/`](prompt_upload_files) contains sample files to upload through the app's document-upload control (or POST directly to `/api/extract`) without needing your own mission brief on hand:
+
+| File | Purpose |
+|---|---|
+| `mission-clear.txt` | All six fields stated plainly — expect a high-confidence parse. |
+| `mission-vague.md` | Casual phrasing (lbs, "a year and a half") — exercises unit conversion / lower-confidence parsing. |
+| `mission-rfp.pdf` | GTO comsat mission written as RFP prose — exercises PDF extraction (`pdf-parse`). |
+| `mission-specs.docx` | LEO rideshare spec sheet with bold field labels — exercises DOCX extraction (`mammoth`). |
+| `unsupported.xlsx` | Not a real spreadsheet — should trigger the 415 "unsupported file type" error. |
+| `empty.txt` | No content — should trigger the 422 "no text could be extracted" error. |
+
 ---
 
 ## API routes
@@ -105,6 +119,7 @@ Without `GEMINI_API_KEY` the app still works fully — see [AI approach](#ai-app
 | Method | Route | Purpose |
 |--------|-------|---------|
 | `POST` | `/api/parse` | Parse a mission description → `ParsedMission` |
+| `POST` | `/api/extract` | Extract text from an uploaded file (multipart `file` field) → `{ text, truncated }` |
 | `POST` | `/api/filter` | Apply hard constraints to the catalog → `{ matches }` |
 | `POST` | `/api/rank` | Filter catalog + score → `RankResponse` (runs filter internally) |
 | `POST` | `/api/explain` | Generate trade-off explanation → `ExplainResponse` |
@@ -112,7 +127,9 @@ Without `GEMINI_API_KEY` the app still works fully — see [AI approach](#ai-app
 
 > **Note:** `/api/filter` is a standalone public endpoint for programmatic use. The UI calls `/api/rank`, which runs the filter step internally; calling `/api/filter` separately is not required for normal app operation.
 >
-> All AI routes (`/api/parse`, `/api/explain`, `/api/improve`) are protected by an in-memory rate limiter (20 requests per 60-second window per IP). Exceeding the limit returns HTTP 429 with a `Retry-After` header.
+> All AI routes (`/api/parse`, `/api/explain`, `/api/improve`) and `/api/extract` are protected by an in-memory rate limiter (20 requests per 60-second window per IP). Exceeding the limit returns HTTP 429 with a `Retry-After` header.
+>
+> `/api/extract` accepts `.txt`, `.md`, `.pdf`, and `.docx` files up to 10 MB. Returns `{ text: string, truncated: boolean }`. Errors: 415 (unsupported type), 413 (oversized), 422 (empty extraction).
 
 ---
 
@@ -122,6 +139,7 @@ Without `GEMINI_API_KEY` the app still works fully — see [AI approach](#ai-app
 data/
   catalog.schema.json     JSON Schema (draft-07) for a catalog entry
   catalog.json            Catalog of 7 launch vehicles / rideshare programs (root copy)
+prompt_upload_files/      Sample .txt/.md/.pdf/.docx files for testing the document-upload feature
 src/
   app/
     page.tsx              Single-page UI
@@ -131,6 +149,7 @@ src/
     globals.css           Global styles (theme + density CSS classes)
     api/
       parse/route.ts      Mission description parser endpoint
+      extract/route.ts    Document upload text-extraction endpoint
       filter/route.ts     Hard-constraint catalog filter endpoint
       rank/route.ts       Filter + ranker endpoint (filter runs internally)
       explain/route.ts    AI explanation endpoint
@@ -138,6 +157,7 @@ src/
   lib/
     types.ts              Shared TypeScript interfaces
     parser.ts             Gemini parser + regex fallback
+    extract.ts            Server-side text extraction (txt/md/pdf/docx) with size limits
     filter.ts             Hard-constraint catalog filter
     ranker.ts             Weighted scorer
     explainer.ts          Gemini explanation + template fallback
@@ -156,6 +176,7 @@ src/
   __tests__/
     parser.test.ts          Heuristic fallback parser
     parser.llm.test.ts      Gemini parser path (mocked SDK)
+    extract.test.ts         MIME resolution, size limits, and per-type extraction (pdf/docx mocked)
     filter.test.ts
     ranker.test.ts
     explainer.test.ts       Template fallback
@@ -196,5 +217,5 @@ The catalog lives in two places: `data/catalog.json` (root, for reference) and `
 npm run dev      # Next.js dev server (http://localhost:3000)
 npm run build    # Production build
 npm run lint     # ESLint
-npm test         # Jest test suite (171 tests, 9 suites)
+npm test         # Jest test suite (193 tests, 10 suites)
 ```

@@ -1,0 +1,5 @@
+Mission Requirements — Project Meridian
+
+We need to launch a 2,400 kg communications payload into a Sun-Synchronous Orbit (SSO) at a target altitude of 620 km. The program budget ceiling is $18 million. We need this on orbit within 14 months of contract signature. Inclination control is flexible — any standard SSO inclination is acceptable, we don't have a fixed requirement.
+
+Please recommend the top launch vehicle options that fit these constraints.
