@@ -768,7 +768,7 @@ function ImprovePanel({
                 {result.fallback && !result.suggested_rewrite && (
                   <p className="text-slate-500 italic">
                     {result.error
-                      ? `*(AI rewrite failed: ${result.error})*`
+                      ? "*(AI rewrite unavailable — an error occurred. Check the console for details.)*"
                       : "*(AI rewrite unavailable — set GEMINI_API_KEY for a full suggested rewrite.)*"}
                   </p>
                 )}
