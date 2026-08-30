@@ -22,21 +22,21 @@ The Satellite Launch Vehicle / Rideshare Configurator is a single-page web appli
 
 ### Pipeline overview
 
-1. **Parse** — free-text mission description → six structured fields (payload mass, orbit type/altitude, budget ceiling, schedule urgency, inclination flexibility) via Gemini 3.6 Flash; regex fallback when no API key is present.
+1. **Parse** — free-text mission description → six structured fields (payload mass, orbit type/altitude, budget ceiling, schedule urgency, inclination flexibility) via Gemini Flash; regex fallback when no API key is present.
 2. **Filter** — eliminate catalog entries that physically can't meet the mass or orbit constraints.
 3. **Rank** — score remaining options by user-weighted priorities (cost vs. schedule control vs. orbit precision).
 4. **Explain** — plain-language rationale for why the top pick wins and how alternatives compare.
-5. **Improve** — identify missing fields and return a rewritten draft with bracketed prompts; a post-parse nudge also surfaces gaps inline on the result card.
+5. **Improve** — identify missing fields and return a rewritten draft with bracketed prompts; a clarifying-questions form collects individual field answers that are merged back into the description. A post-parse nudge also surfaces gaps inline on the result card.
 
 ### AI approach and architecture
 
-The pipeline uses **Gemini 3.6 Flash** (via the Google Generative AI API) for three distinct tasks:
+The pipeline uses **Gemini Flash** (via the Google Generative AI API) for three distinct tasks:
 
 1. **Natural-language parsing** (`/api/parse`) — a structured-output prompt extracts six mission fields (payload mass, orbit type, target altitude, budget ceiling, max lead time, inclination flexibility) from a free-text description. Confidence is reported per-field so the UI can surface ambiguities.
 2. **Trade-off explanation** (`/api/explain`) — given the ranked results, Gemini writes a concise, mission-specific rationale covering why the top vehicle was selected and how the alternatives compare.
 3. **Description improvement** (`/api/improve`) — Gemini identifies which fields are missing and returns a rewritten draft with bracketed prompts for each gap, helping users self-correct before re-submitting.
 
-All three AI steps degrade gracefully: if no `GEMINI_API_KEY` is present, the parser falls back to a regex heuristic, the explainer uses a template, and the improver returns a plain list of missing fields. The filter and ranking steps are fully deterministic and never require an LLM.
+The active Gemini model (Gemini 3.6 Flash, 3.5 Flash, or 3.1 Flash) is user-selectable from the Settings panel and persisted to `localStorage`. All three AI steps degrade gracefully: if no `GEMINI_API_KEY` is present, the parser falls back to a regex heuristic, the explainer uses a template, and the improver returns a plain list of missing fields. The filter and ranking steps are fully deterministic and never require an LLM.
 
 ### Selected challenge theme
 
@@ -51,8 +51,9 @@ IBM Bob (the AI coding assistant embedded in the development environment) was us
 - **Architecture and scoping** — Bob helped translate the challenge brief into a concrete feature list and a day-by-day build plan, and proposed the parse → filter → rank → explain pipeline structure.
 - **Code generation** — Bob generated initial implementations of the Gemini prompt wrappers (`parser.ts`, `explainer.ts`, `improver.ts`), the catalog filter (`filter.ts`), and the weighted ranker (`ranker.ts`), as well as the Next.js API route handlers.
 - **Test suite** — Bob wrote the Jest test suite (171 tests), covering both the offline fallback paths and the Gemini paths against a mocked SDK, the hard-constraint filter and ranker, and an end-to-end check that the user's prompt reaches Gemini verbatim through the API routes.
-- **UI iteration** — Bob implemented the `ImprovePanel`, `SessionHistoryPanel`, `DownloadMenu`, and the post-parse confidence nudge, and iterated on layout and accessibility based on feedback.
-- **Documentation** — Bob authored both `README.md` and `REPO_README.md`, and maintained the `launch-vehicle-configurator-plan.md` build log throughout the project.
+- **UI iteration** — Bob implemented the `ImprovePanel`, `ClarifyingQuestionsForm`, `SessionHistoryPanel`, `DownloadMenu`, `SettingsPanel`, `SettingsSidebar`, and the post-parse confidence nudge, and iterated on layout and accessibility based on feedback.
+- **Infrastructure** — Bob added the in-memory rate limiter (`rateLimit.ts`), the `UISettingsProvider` context with `localStorage` persistence, and custom 404/500 error pages.
+- **Documentation** — Bob authored and maintained `README.md` and `launch-vehicle-configurator-plan.md` throughout the project.
 
 ---
 
@@ -61,10 +62,13 @@ IBM Bob (the AI coding assistant embedded in the development environment) was us
 - **Natural-language parsing** — extracts six structured fields from a plain-English description: payload mass, orbit type, target altitude, budget ceiling, max lead time, and inclination flexibility.
 - **Catalog filter + ranker** — eliminates vehicles that can't meet hard constraints (mass, orbit, budget, schedule), then scores the remaining options against user-weighted priorities (cost / schedule / orbit precision).
 - **AI explanation** — plain-language trade-off rationale for the top results.
-- **Improve my description** — identifies missing fields and returns a rewritten draft with bracketed prompts for gaps; a "Use this" button replaces the textarea content — never auto-submitted.
+- **Improve my description** — identifies missing fields and returns a rewritten draft with bracketed prompts for gaps; a "Use this" button replaces the textarea content — never auto-submitted. A structured **clarifying-questions form** lets users fill in individual fields that are merged into the description.
 - **Post-parse nudge** — after a low- or medium-confidence parse, the result card shows which fields were not found, with a one-click link back to the improve panel.
 - **Session history** — past analyses are saved to `localStorage` and can be restored or cleared.
 - **Export** — download results in six formats: JSON, Markdown, plain-text (TXT), CSV, PDF, and DOCX.
+- **Settings panel** — slide-in drawer (mobile) and always-visible sidebar (desktop) for appearance (dark / light / system), UI density (compact / default / spacious), language/locale, and active Gemini model. All settings persist to `localStorage`.
+- **Rate limiting** — in-memory sliding-window rate limiter on all AI API routes (20 req/min per IP by default) to protect the Gemini API key.
+- **Error pages** — custom 404 (not-found) and 500 (global error boundary) pages.
 
 ---
 
@@ -107,6 +111,8 @@ Without `GEMINI_API_KEY` the app still works fully — see [AI approach](#ai-app
 | `POST` | `/api/improve` | Identify missing fields + optional rewrite → `ImproveResponse` |
 
 > **Note:** `/api/filter` is a standalone public endpoint for programmatic use. The UI calls `/api/rank`, which runs the filter step internally; calling `/api/filter` separately is not required for normal app operation.
+>
+> All AI routes (`/api/parse`, `/api/explain`, `/api/improve`) are protected by an in-memory rate limiter (20 requests per 60-second window per IP). Exceeding the limit returns HTTP 429 with a `Retry-After` header.
 
 ---
 
@@ -115,10 +121,14 @@ Without `GEMINI_API_KEY` the app still works fully — see [AI approach](#ai-app
 ```
 data/
   catalog.schema.json     JSON Schema (draft-07) for a catalog entry
-  catalog.json            Catalog of 7 launch vehicles / rideshare programs
+  catalog.json            Catalog of 7 launch vehicles / rideshare programs (root copy)
 src/
   app/
     page.tsx              Single-page UI
+    layout.tsx            Root layout — wraps app with UISettingsProvider
+    global-error.tsx      Global 500 error boundary
+    not-found.tsx         Custom 404 page
+    globals.css           Global styles (theme + density CSS classes)
     api/
       parse/route.ts      Mission description parser endpoint
       filter/route.ts     Hard-constraint catalog filter endpoint
@@ -132,9 +142,17 @@ src/
     ranker.ts             Weighted scorer
     explainer.ts          Gemini explanation + template fallback
     improver.ts           Gemini description improver + fallback
+    exporters.ts          Client-side export helpers (JSON, MD, TXT, CSV, PDF, DOCX)
+    rateLimit.ts          In-memory sliding-window rate limiter for API routes
+    uiSettings.tsx        UISettingsProvider context (theme, density, language, model)
   components/
-    DownloadMenu.tsx       Export (JSON, Markdown, TXT, CSV, PDF, DOCX)
-    SessionHistoryPanel.tsx  localStorage session history
+    DownloadMenu.tsx              Export menu (JSON, Markdown, TXT, CSV, PDF, DOCX)
+    SessionHistoryPanel.tsx       localStorage session history
+    SettingsPanel.tsx             Slide-in settings drawer (mobile/overlay)
+    SettingsSidebar.tsx           Always-visible settings sidebar (desktop)
+  data/
+    catalog.json          Catalog source used at runtime (imported by src/data/index.ts)
+    index.ts              Typed re-export of catalog.json as LaunchVehicleEntry[]
   __tests__/
     parser.test.ts          Heuristic fallback parser
     parser.llm.test.ts      Gemini parser path (mocked SDK)
@@ -160,11 +178,13 @@ Seven entries covering the realistic trade-space for smallsat / CubeSat missions
 |---|---|---|---|---|---|
 | `spacex-transporter` | SpaceX | Falcon 9 Transporter | rideshare | 200 kg SSO | ~$6,000/kg |
 | `rocketlab-electron` | Rocket Lab | Electron | dedicated-small | 300 kg LEO | ~$8M/launch |
-| `firefly-alpha` | Firefly Aerospace | Alpha | dedicated-small | 1,030 kg LEO | ~$15M/launch |
+| `firefly-alpha` | Firefly Aerospace | Firefly Alpha | dedicated-small | 1,030 kg LEO | ~$15M/launch |
 | `arianespace-vega-c-ssms` | Arianespace / ESA | Vega-C SSMS | rideshare | 700 kg SSO | ~$20,000/kg |
 | `isro-pslv-cl` | ISRO / NSIL | PSLV-C (commercial) | rideshare | 1,750 kg SSO | ~$15,000/kg |
 | `virgin-orbit-launcher-one` | Virgin Orbit | LauncherOne | dedicated-small | 500 kg LEO | *retired* |
 | `exolaunch-rideshare-d-orbit` | D-Orbit / Exolaunch | ION Satellite Carrier | rideshare | 450 kg SSO | ~$10,000/kg |
+
+The catalog lives in two places: `data/catalog.json` (root, for reference) and `src/data/catalog.json` (imported at runtime via `src/data/index.ts`). Both files are identical; the root copy is the canonical schema-validated source.
 
 > **Data accuracy note:** figures are sourced from publicly available payload user's guides, commercial rate cards, and investor materials current as of mid-2025. Verify final numbers from each provider's official Payload User's Guide before any real mission commitment. The Virgin Orbit entry is retained as a retired historical reference only.
 
@@ -176,5 +196,5 @@ Seven entries covering the realistic trade-space for smallsat / CubeSat missions
 npm run dev      # Next.js dev server (http://localhost:3000)
 npm run build    # Production build
 npm run lint     # ESLint
-npm test         # Jest test suite
+npm test         # Jest test suite (171 tests, 9 suites)
 ```
