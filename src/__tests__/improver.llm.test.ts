@@ -74,6 +74,18 @@ describe("improveMissionDescription — request sent to Gemini", () => {
     await improveMissionDescription("anything", ["budget_usd"]);
     expect(__requestCount()).toBe(0);
   });
+
+  it("uses the caller-supplied model — matches the model picked in Settings", async () => {
+    __queueJson(improveJson());
+    await improveMissionDescription("anything", [], "gemini-3.1-flash-lite");
+    expect(__lastRequest()?.model).toBe("gemini-3.1-flash-lite");
+  });
+
+  it("falls back to the default model when none is supplied", async () => {
+    __queueJson(improveJson());
+    await improveMissionDescription("anything", []);
+    expect(__lastRequest()?.model).toBe("gemini-3.6-flash");
+  });
 });
 
 // ---------------------------------------------------------------------------
