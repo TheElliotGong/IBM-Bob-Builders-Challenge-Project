@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { ImproveResponse, ClarifyingQuestion } from "@/lib/types";
+import type { ImproveResponse, ClarifyingQuestion, ParsedMission } from "@/lib/types";
+import { heuristicParse } from "@/lib/parser";
 
 // ---------------------------------------------------------------------------
 // Zod schema for LLM JSON output
@@ -79,6 +80,22 @@ const FALLBACK_QUESTIONS: Record<string, ClarifyingQuestion> = {
   },
 };
 
+/**
+ * The `missing` list is computed client-side and can go stale — e.g. the user
+ * uploads/edits the description without re-running analysis first, so it still
+ * reflects an earlier (or empty) parse. Re-check the *current* text with the
+ * cheap heuristic parser and drop any field it can plainly find, so we never
+ * ask the user for something already sitting in the text box. A field the
+ * heuristic can't find stays in the list — the LLM path below still gets a
+ * chance to infer it more cleverly before treating it as truly missing.
+ */
+function reconcileMissingFields(text: string, missing: string[]): string[] {
+  if (missing.length === 0) return missing;
+  const found: ParsedMission = heuristicParse(text);
+  const foundRecord = found as unknown as Record<string, unknown>;
+  return missing.filter((key) => foundRecord[key] === null || foundRecord[key] === undefined);
+}
+
 function buildFallback(_text: string, missing: string[], error?: string): ImproveResponse {
   return {
     missing_fields: missing,
@@ -100,16 +117,17 @@ export async function improveMissionDescription(
   model = "gemini-3.6-flash"
 ): Promise<ImproveResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
+  const reconciledMissing = reconcileMissingFields(text, missing);
 
   if (!apiKey) {
-    return buildFallback(text, missing);
+    return buildFallback(text, reconciledMissing);
   }
 
   try {
     const { GoogleGenAI } = await import("@google/genai");
     const client = new GoogleGenAI({ apiKey });
 
-    const userContent = `Mission description:\n${text}\n\nMissing or ambiguous fields: ${missing.join(", ") || "none identified — review for clarity"}`;
+    const userContent = `Mission description:\n${text}\n\nMissing or ambiguous fields: ${reconciledMissing.join(", ") || "none identified — review for clarity"}`;
 
     const response = await client.models.generateContent({
       model,
@@ -134,6 +152,6 @@ export async function improveMissionDescription(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[improver] Gemini call failed:", message);
-    return buildFallback(text, missing, message);
+    return buildFallback(text, reconciledMissing, message);
   }
 }

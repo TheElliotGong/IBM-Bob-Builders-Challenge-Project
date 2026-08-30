@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useId } from "react";
 import type {
   ParsedMission,
   RankedVehicle,
@@ -798,6 +798,144 @@ function GearIcon() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// FileUploadControl — lets the user upload a .txt/.md/.pdf/.docx and have its
+// text extracted server-side into the mission description textarea.
+// ---------------------------------------------------------------------------
+
+const ACCEPTED_EXTENSIONS = ".txt,.md,.pdf,.docx";
+const ACCEPTED_LABEL = "TXT, MD, PDF, DOCX";
+const MAX_FILE_MB = 10;
+
+function FileUploadControl({
+  onExtracted,
+}: {
+  onExtracted: (text: string) => void;
+}) {
+  const inputId = useId();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [lastFilename, setLastFilename] = useState<string | null>(null);
+  const [truncated, setTruncated] = useState(false);
+
+  async function handleFile(file: File) {
+    setUploadError(null);
+    setTruncated(false);
+
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      setUploadError(`File exceeds ${MAX_FILE_MB} MB limit.`);
+      return;
+    }
+
+    setUploading(true);
+    setLastFilename(file.name);
+
+    const form = new FormData();
+    form.append("file", file);
+
+    try {
+      const res = await fetch("/api/extract", { method: "POST", body: form });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setUploadError(data.error ?? "Extraction failed.");
+        setLastFilename(null);
+        return;
+      }
+
+      onExtracted(data.text as string);
+      setTruncated(!!data.truncated);
+    } catch {
+      setUploadError("Could not reach the server. Please try again.");
+      setLastFilename(null);
+    } finally {
+      setUploading(false);
+      // Reset the input so the same file can be re-uploaded after an edit
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {/* Drop zone / trigger */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload a document to populate the mission description"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onClick={() => fileRef.current?.click()}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileRef.current?.click(); }}
+        className="flex items-center gap-3 rounded-lg border border-dashed border-slate-600 bg-slate-800/40 px-4 py-3 cursor-pointer hover:border-sky-500 hover:bg-slate-800/70 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2"
+      >
+        {/* Upload icon */}
+        <svg aria-hidden="true" className="w-5 h-5 shrink-0 text-slate-400" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v1.25A1.25 1.25 0 004.25 19h11.5A1.25 1.25 0 0017 17.75V16.5M10 13V3m0 0L6.5 6.5M10 3l3.5 3.5" />
+        </svg>
+
+        <div className="flex-1 min-w-0">
+          {uploading ? (
+            <p className="text-sm text-sky-400">Extracting text…</p>
+          ) : lastFilename && !uploadError ? (
+            <p className="text-sm text-emerald-400 truncate">
+              <span aria-hidden="true">✓ </span>{lastFilename}
+            </p>
+          ) : (
+            <p className="text-sm text-slate-400">
+              Upload document <span className="text-slate-500 text-xs">({ACCEPTED_LABEL}, max {MAX_FILE_MB} MB)</span>
+            </p>
+          )}
+        </div>
+
+        <span className="text-xs font-medium text-sky-400 shrink-0">Browse</span>
+
+        <input
+          ref={fileRef}
+          id={inputId}
+          type="file"
+          accept={ACCEPTED_EXTENSIONS}
+          className="sr-only"
+          onChange={handleChange}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
+      </div>
+
+      {/* Inline error */}
+      {uploadError && (
+        <p role="alert" className="text-xs text-rose-400 px-1">
+          {uploadError}
+        </p>
+      )}
+
+      {/* Truncation notice */}
+      {truncated && !uploadError && (
+        <p role="status" className="text-xs text-amber-400 px-1">
+          Document was very long — only the first 50,000 characters were loaded. Review and trim if needed.
+        </p>
+      )}
+    </div>
+  );
+}
+
+
+
 export default function Home() {
   const { settings, resolvedTheme } = useUISettings();
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
@@ -813,10 +951,13 @@ export default function Home() {
   const [eliminated, setEliminated] = useState<MatchedVehicle[] | null>(null);
   const [explanation, setExplanation] = useState<ExplainResponse | null>(null);
 
-  // Session history — lazy init reads localStorage only on the client
-  const [sessions, setSessions] = useState<SessionRecord[]>(() =>
-    typeof window !== "undefined" ? loadSessions() : []
-  );
+  // Session history — starts empty to match SSR, then loads from localStorage
+  // after mount so the client's first render doesn't diverge from the server's.
+  const [sessions, setSessions] = useState<SessionRecord[]>([]);
+
+  useEffect(() => {
+    setSessions(loadSessions());
+  }, []);
 
   // Ref used to scroll/focus the textarea when "Improve my description ↑" is clicked
   // from inside MissionCard (Tier-1 nudge)
@@ -950,6 +1091,31 @@ export default function Home() {
             <h1 className={`text-3xl lg:text-4xl font-bold tracking-tight ${resolvedTheme === "light" ? "text-slate-900" : "text-slate-50"}`}>
               Satellite Launch Vehicle / Rideshare Configurator
             </h1>
+            <p className={`text-sm font-medium flex flex-wrap items-center gap-x-3 gap-y-1 ${resolvedTheme === "light" ? "text-slate-500" : "text-slate-400"}`}>
+              <span>by Elliot Gong &middot; August 2026</span>
+              <a
+                href="https://github.com/TheElliotGong/IBM-Bob-Builders-Challenge-Project"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors
+                  ${resolvedTheme === "light"
+                    ? "border-slate-300 text-slate-600 hover:border-sky-400 hover:text-sky-600"
+                    : "border-slate-600 text-slate-400 hover:border-sky-500 hover:text-sky-400"
+                  }`}
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+                    0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+                    -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+                    .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+                    -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
+                    .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+                    .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+                    0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                </svg>
+                GitHub
+              </a>
+            </p>
               <p className={`text-sm lg:text-base leading-relaxed max-w-lg ${resolvedTheme === "light" ? "text-slate-600" : "text-slate-400"}`}>
                 Describe your mission in plain English. The AI pipeline will parse your requirements,
                 filter the launch catalog, rank options by your priorities, and explain the trade-offs.
@@ -973,7 +1139,7 @@ export default function Home() {
 
         {/* Input */}
         <section className="space-y-3">
-          <label htmlFor="mission-desc" className="block text-sm lg:text-base font-medium text-slate-300">
+          <label htmlFor="mission-desc" className="block text-base lg:text-xl font-semibold text-slate-200">
             Mission Description
           </label>
           <textarea
@@ -983,6 +1149,14 @@ export default function Home() {
             placeholder={PLACEHOLDER}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+          />
+
+          {/* Document upload — extracts text into the textarea above */}
+          <FileUploadControl
+            onExtracted={(text) => {
+              setDescription(text);
+              document.getElementById("mission-desc")?.focus();
+            }}
           />
 
           {/* Tier-2: Improve my description button + result panel */}
@@ -995,10 +1169,10 @@ export default function Home() {
           <PromptFieldsHint />
 
           {/* Priority weight sliders */}
-          <fieldset className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 space-y-4">
-            <legend className="text-xs lg:text-sm font-semibold text-slate-300 uppercase tracking-wide px-1">
+          <div className="rounded-lg border border-slate-700 bg-slate-800/40 px-4 py-3 space-y-4">
+            <p className="text-xs lg:text-sm font-semibold text-slate-400 uppercase tracking-wide">
               Mission Priorities
-            </legend>
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <WeightSlider
                 label={<><span aria-hidden="true">💰 </span>Cost</>}
@@ -1022,7 +1196,7 @@ export default function Home() {
                 onChange={(v) => setWeight("orbit_precision", v)}
               />
             </div>
-          </fieldset>
+          </div>
 
           <button
             onClick={handleAnalyze}
@@ -1062,6 +1236,7 @@ export default function Home() {
               </h2>
               <DownloadMenu
                 payload={{
+                  userPrompt: description,
                   mission,
                   ranked: ranked ?? [],
                   eliminated: eliminated ?? [],
@@ -1101,8 +1276,9 @@ export default function Home() {
             {/* Eliminated vehicles (collapsible) */}
             {eliminated && eliminated.length > 0 && (
               <details className="group">
-                <summary className="cursor-pointer text-xs lg:text-sm text-slate-500 hover:text-slate-300 transition-colors list-none focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 rounded">
-                  <span aria-hidden="true">▶ </span>Show {eliminated.length} eliminated option{eliminated.length !== 1 ? "s" : ""}
+                <summary className="cursor-pointer flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/60 px-5 py-3 text-sm lg:text-base font-medium text-slate-300 hover:border-slate-500 hover:bg-slate-800 hover:text-white transition-colors list-none focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2">
+                  <span aria-hidden="true" className="inline-block transition-transform group-open:rotate-90">▶</span>
+                  Show {eliminated.length} eliminated option{eliminated.length !== 1 ? "s" : ""}
                 </summary>
                 <div className="mt-3 space-y-3">
                   {eliminated.map((m) => (
