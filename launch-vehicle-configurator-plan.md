@@ -49,7 +49,63 @@ Seed data points to verify against each provider's official payload user's guide
 
 ---
 
+## Completed Work Log
+
+### Phase 1 — Core pipeline
+
+- **`data/catalog.json`** — 7-entry catalog with full schema fields: SpaceX Transporter, Rocket Lab Electron, Firefly Alpha, Arianespace Vega-C SSMS, ISRO PSLV-C, Virgin Orbit LauncherOne (retired), D-Orbit/Exolaunch ION Satellite Carrier.
+- **`data/catalog.schema.json`** — JSON Schema (draft-07) for a catalog entry; all catalog entries validated against it.
+- **`src/lib/types.ts`** — canonical TypeScript interfaces: `LaunchVehicleEntry`, `ParsedMission`, `MatchedVehicle`, `PriorityWeights`, `RankedVehicle`, `RankResponse`, `ExplainResponse`, `ClarifyingQuestion`, `ImproveResponse`, `SessionRecord`.
+- **`src/lib/parser.ts`** — Gemini structured-output parser (6 fields + confidence). Regex heuristic fallback when `GEMINI_API_KEY` absent.
+- **`src/lib/filter.ts`** — hard-constraint catalog filter; eliminates vehicles that fail mass, orbit, budget, or schedule requirements; returns `MatchedVehicle[]` with per-constraint pass/fail and an `elimination_reason` string.
+- **`src/lib/ranker.ts`** — weighted scorer; normalises cost, schedule, and orbit-precision scores to 0–100 per vehicle, applies user priority weights, and returns a ranked `RankedVehicle[]` list.
+- **`src/lib/explainer.ts`** — Gemini explanation generator. Template fallback produces a structured trade-off summary without an LLM.
+- **`src/lib/improver.ts`** — Gemini description improver; identifies missing fields, returns `ClarifyingQuestion[]` and an optional rewritten description with bracketed prompts. Static-question fallback when no API key.
+
+### Phase 2 — API routes
+
+- **`/api/parse`** — thin route handler; calls `parser.ts`, returns `ParsedMission`.
+- **`/api/filter`** — calls `filter.ts`, returns `{ matches: MatchedVehicle[] }`.
+- **`/api/rank`** — calls `filter.ts` + `ranker.ts`, returns `RankResponse` (`ranked` + `eliminated`). This is the primary endpoint used by the UI.
+- **`/api/explain`** — calls `explainer.ts`, returns `ExplainResponse`.
+- **`/api/improve`** — calls `improver.ts`, returns `ImproveResponse`.
+
+### Phase 3 — UI
+
+- **`src/app/page.tsx`** — single-page UI with: mission description textarea, `WeightSlider` controls, `ImprovePanel` (Gemini rewrite + progress bar + `ClarifyingQuestionsForm`), `MissionCard` (parsed fields + confidence badges), `RankedVehicleCard` (score bar, score breakdown, estimated cost), `EliminatedCard`, `ExplanationPanel`, post-parse confidence nudge (missing-fields inline hint with link to improve panel), `SessionHistoryPanel`, and `DownloadMenu`.
+- **`src/components/DownloadMenu.tsx`** — export menu for six formats; delegates to `exporters.ts`.
+- **`src/components/SessionHistoryPanel.tsx`** — `localStorage`-backed session history; restore or clear past analyses.
+- **`src/lib/exporters.ts`** — all client-side export logic: JSON, Markdown, TXT, CSV, PDF (jsPDF), DOCX (docx library).
+
+### Phase 4 — Settings, rate limiting, and infrastructure
+
+- **`src/lib/uiSettings.tsx`** — `UISettingsProvider` React context; manages `theme` (dark / light / system), `density` (compact / default / spacious), `language` (BCP-47), and `geminiModel` (3.6 / 3.5 / 3.1 Flash). Persists to `localStorage` key `launch-selector-ui-settings`. Applies `dark-mode`/`light-mode` and `density-*` classes to `<html>` for CSS-driven theming.
+- **`src/components/SettingsPanel.tsx`** — slide-in settings drawer with focus trap, Escape-key close, and backdrop dismiss. Used on mobile / smaller viewports.
+- **`src/components/SettingsSidebar.tsx`** — always-visible sticky settings sidebar rendered alongside the main content on wider screens.
+- **`src/lib/rateLimit.ts`** — in-memory sliding-window rate limiter; default 20 req/60 s per IP. Applied to `/api/parse`, `/api/explain`, and `/api/improve`. Returns HTTP 429 with `Retry-After` on limit breach. Opportunistically purges expired entries when the store exceeds 10 000 entries.
+- **`src/app/layout.tsx`** — root layout; wraps the app in `UISettingsProvider`.
+- **`src/app/global-error.tsx`** — global 500 error boundary with "Try again" retry action.
+- **`src/app/not-found.tsx`** — custom 404 page with link back to the configurator.
+- **`src/data/catalog.json`** — runtime copy of the catalog (identical to root `data/catalog.json`).
+- **`src/data/index.ts`** — typed re-export: `export const LAUNCH_CATALOG: LaunchVehicleEntry[]`.
+
+### Phase 5 — Tests
+
+- 9 Jest test suites, 171 tests, all passing.
+  - `parser.test.ts` — regex fallback; edge-case inputs.
+  - `parser.llm.test.ts` — Gemini path via mocked `@google/genai` SDK.
+  - `filter.test.ts` — hard-constraint matrix; all pass/fail combinations.
+  - `ranker.test.ts` — weight normalisation, tie-breaking, score-breakdown accuracy.
+  - `explainer.test.ts` — template fallback; field substitution.
+  - `explainer.llm.test.ts` — Gemini path (mocked).
+  - `improver.test.ts` — static-question fallback; field detection.
+  - `improver.llm.test.ts` — Gemini path (mocked).
+  - `prompt-delivery.test.ts` — end-to-end: verifies user prompt reaches Gemini verbatim through the API route stack.
+  - `__mocks__/@google/genai.ts` — manual Jest mock; no network or API key needed in any test.
+
+---
+
 ## Next Steps
-- Draft the JSON catalog schema
-- Draft the constraint-parsing prompt for the LLM
 - Confirm exact submission requirements on the official challenge page (deliverable format, required use of IBM Bob/watsonx, demo video, etc.)
+- Consider adding a light-mode CSS pass once Tailwind `light-mode` class overrides are wired up.
+- Consider global rate-limit persistence (Vercel KV / Redis) if the app is deployed publicly.
