@@ -18,12 +18,12 @@ export type Density = "compact" | "default" | "spacious";
 export type GeminiModel =
   | "gemini-3.6-flash"
   | "gemini-3.5-flash"
-  | "gemini-3.1-flash";
+  | "gemini-3.1-flash-lite";
 
 export const GEMINI_MODELS: { id: GeminiModel; label: string }[] = [
   { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash Lite" },
   { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash Lite" },
-  { id: "gemini-3.1-flash", label: "Gemini 3.1 Flash Lite" },
+  { id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite" },
 ];
 
 export interface UISettings {
@@ -64,12 +64,20 @@ export const SUPPORTED_LANGUAGES: { tag: string; label: string }[] = [
   { tag: "pt-BR", label: "Português (BR)" },
 ];
 
+const KNOWN_GEMINI_MODELS = new Set<string>(GEMINI_MODELS.map((m) => m.id));
+
 function loadSettings(): UISettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const merged = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    // A previously-saved model id can go stale (renamed/retired upstream) —
+    // fall back to the default rather than persisting a call that 404s forever.
+    if (!KNOWN_GEMINI_MODELS.has(merged.geminiModel)) {
+      merged.geminiModel = DEFAULT_SETTINGS.geminiModel;
+    }
+    return merged;
   } catch {
     return DEFAULT_SETTINGS;
   }
