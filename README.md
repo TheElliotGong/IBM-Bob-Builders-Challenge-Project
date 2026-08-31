@@ -36,7 +36,7 @@ The pipeline uses **Gemini Flash** (via the Google Generative AI API) for three 
 2. **Trade-off explanation** (`/api/explain`) — given the ranked results, Gemini writes a concise, mission-specific rationale covering why the top vehicle was selected and how the alternatives compare.
 3. **Description improvement** (`/api/improve`) — Gemini identifies which fields are missing and returns a rewritten draft with bracketed prompts for each gap, helping users self-correct before re-submitting.
 
-The active Gemini model (Gemini 3.6 Flash, 3.5 Flash, or 3.1 Flash) is user-selectable from the Settings panel and persisted to `localStorage`. All three AI steps degrade gracefully: if no `GEMINI_API_KEY` is present, the parser falls back to a regex heuristic, the explainer uses a template, and the improver returns a plain list of missing fields. The filter and ranking steps are fully deterministic and never require an LLM.
+The active Gemini model (Gemini 3.6 Flash, 3.5 Flash Lite, or 3.1 Flash Lite) is user-selectable from the Settings panel and persisted to `localStorage`; the default is **Gemini 3.5 Flash Lite**. All three AI steps degrade gracefully: if no `GEMINI_API_KEY` is present, the parser falls back to a regex heuristic, the explainer uses a template, and the improver returns a plain list of missing fields. The filter and ranking steps are fully deterministic and never require an LLM.
 
 ### Selected challenge theme
 

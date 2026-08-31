@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const description: unknown = body?.description;
     const missing: unknown = body?.missing ?? [];
-    const model: string = typeof body?.model === "string" ? body.model : "gemini-3.6-flash";
+    const model: string = typeof body?.model === "string" ? body.model : "gemini-3.5-flash-lite";
 
     if (!description || typeof description !== "string") {
       return NextResponse.json(

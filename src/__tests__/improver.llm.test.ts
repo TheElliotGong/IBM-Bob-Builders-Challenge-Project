@@ -84,7 +84,7 @@ describe("improveMissionDescription — request sent to Gemini", () => {
   it("falls back to the default model when none is supplied", async () => {
     __queueJson(improveJson());
     await improveMissionDescription("anything", []);
-    expect(__lastRequest()?.model).toBe("gemini-3.6-flash");
+    expect(__lastRequest()?.model).toBe("gemini-3.5-flash-lite");
   });
 });
 
