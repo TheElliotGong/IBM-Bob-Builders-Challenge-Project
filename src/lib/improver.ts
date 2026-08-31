@@ -114,7 +114,7 @@ function buildFallback(_text: string, missing: string[], error?: string): Improv
 export async function improveMissionDescription(
   text: string,
   missing: string[],
-  model = "gemini-3.6-flash"
+  model = "gemini-3.5-flash-lite"
 ): Promise<ImproveResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   const reconciledMissing = reconcileMissingFields(text, missing);

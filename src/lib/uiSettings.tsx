@@ -17,12 +17,13 @@ export type Theme = "dark" | "light" | "system";
 export type Density = "compact" | "default" | "spacious";
 export type GeminiModel =
   | "gemini-3.6-flash"
-  | "gemini-3.5-flash"
+  | "gemini-3.5-flash-lite"
   | "gemini-3.1-flash-lite";
 
 export const GEMINI_MODELS: { id: GeminiModel; label: string }[] = [
-  { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash Lite" },
-  { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash Lite" },
+  // No lite variant exists for 3.6 yet — this is the full Flash tier, not Lite.
+  { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash" },
+  { id: "gemini-3.5-flash-lite", label: "Gemini 3.5 Flash Lite" },
   { id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite" },
 ];
 
@@ -50,7 +51,7 @@ const DEFAULT_SETTINGS: UISettings = {
   theme: "system",
   density: "default",
   language: "en-US",
-  geminiModel: "gemini-3.6-flash",
+  geminiModel: "gemini-3.5-flash-lite",
 };
 
 export const SUPPORTED_LANGUAGES: { tag: string; label: string }[] = [

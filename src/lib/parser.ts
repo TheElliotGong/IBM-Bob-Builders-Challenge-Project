@@ -323,7 +323,7 @@ function resolveField<T>(
 // ---------------------------------------------------------------------------
 export async function parseMissionDescription(
   text: string,
-  model = "gemini-3.6-flash"
+  model = "gemini-3.5-flash-lite"
 ): Promise<ParsedMission> {
   const apiKey = process.env.GEMINI_API_KEY;
 
