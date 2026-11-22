@@ -22,7 +22,7 @@ const securityHeaders = [
   // Disable browser features we never use
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=()",
+    value: "geolocation=(), payment=()",
   },
   // Enforce HTTPS for 1 year once deployed (Vercel always serves HTTPS)
   {
